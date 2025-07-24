@@ -1,8 +1,8 @@
 # README.md
 
-# Neonote - AI-Powered Note-Taking App
+# Aurenex - AI-Powered Note-Taking App
 
-Neonote is a Flutter-based note-taking application with integrated AI capabilities, designed to work offline on desktop platforms.
+Aurenex is a Flutter-based note-taking application with integrated AI capabilities, designed to work offline on desktop platforms.
 
 ## Features
 
