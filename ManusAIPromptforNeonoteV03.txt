@@ -1,0 +1,539 @@
+## Manus AI Prompt for "Neonote"
+
+You are “Project Architect,” an AI assistant that, upon receiving this prompt, must immediately generate a complete, production-ready, cross-platform Flutter (with optional Tauri/Rust) codebase for a fully offline, server-free Notion clone—without asking any clarifying questions. All phases (from core storage and basic blocks through Advanced Block Types, offline AI Assistant, Graph View, online integrations, and end-user customization) must be coded in full.
+
+---
+
+### 1. Platforms & Frameworks
+
+* **Flutter:** Single shared codebase for Windows, macOS, Linux, Android, iOS, and iPadOS (no extra native projects).
+* **Optional Tauri/Rust:** Only for advanced desktop plugins (e.g., high-performance SQLite watchers, file watchers).
+
+---
+
+### 2. Storage & File Model
+
+* **Page Folder:**
+  • Each page is stored as a folder named `page.md` containing YAML front-matter (`title`, `tags`, `created`, `updated`) plus an `assets/` subfolder for all attachments (images, audio, video, PDF, etc.).
+* **SQLite Database:**
+  • Index all blocks, support full-text search, maintain tag and backlink indices, store embeddings for RAG (Retrieval-Augmented Generation), sync groups, and comments.
+* **Git Versioning:**
+  • Automatically track changes to each page folder. Provide UI for viewing commit history, diffing versions, and rolling back to prior states.
+
+---
+
+### 3. Block Types (All 35+)
+
+* **Text Blocks:**
+  • Paragraph, heading\_1, heading\_2, heading\_3, quote, callout, divider, table\_of\_contents.
+* **Lists:**
+  • Bulleted\_list\_item, numbered\_list\_item, to\_do, toggle.
+* **Layout Blocks:**
+  • Column\_list → column (adjustable column ratio via drag-and-drop).
+* **Databases:**
+  • Child\_database, table → table\_row → table\_cell, with inline editing.
+* **Media & Embeds:**
+  • Images (PNG, JPEG, GIF, SVG, WebP, HEIC) with automatic thumbnail generation and scalable rendering.
+  • Photos, screenshots, GIFs in any format.
+  • Audio (MP3, WAV, AAC, OGG) with waveform previews in the editor.
+  • Video (MP4, WebM, MOV) with thumbnail generation and in-app video player.
+  • Files (PDF, DOCX, XLSX, PPTX) rendered via PDF.js and Office viewers.
+  • Bookmark, embed, link\_preview, and website embeds with live metadata fetching.
+* **Advanced Blocks:**
+  • Synced\_block (blocks that share the same sync\_group ID and update live across all instances).
+  • Template, child\_page, link\_to\_page, breadcrumb, unsupported\_block placeholders.
+* **Special Blocks:**
+  • Code block with syntax highlighting for multiple languages.
+  • Equation (LaTeX) rendered in real time.
+  • Future blocks automatically mapped if new block types are introduced by Notion.
+
+---
+
+### 4. Link Handling
+
+* **Internal Links:**
+  • Use `/page_id` or `[[Page Title]]` to create a LinkToPage entity; support auto-complete in the editor and display backlinks in a separate “Backlinks” table and graph.
+* **Tags:**
+  • `#TagName` syntax to tag content; maintain tag index and allow filtering by tag; display tags as nodes in the graph.
+* **External Links:**
+  • Support `[Label](URL)` and bare `https://…` for auto-generating a Bookmark card with metadata.
+* **Notion API Integration (Optional):**
+  • Optionally fetch and import page content, media, and comments from a user’s Notion workspace, mapping to Neonote’s custom block model.
+
+---
+
+### 5. Markdown Round-Trip
+
+* **Import:**
+  • Parse Notion’s Markdown export (including YAML front-matter) into the block model, preserving all media references (images, PDFs, videos).
+* **Export:**
+  • Serialize to Markdown with custom fences for columns, callouts, synced\_blocks, Mermaid, and embeds. Use standard Markdown syntax for lists, tables, code blocks, and LaTeX equations.
+* **Live Preview:**
+  • Implement `flutter_markdown` plus necessary plugins to mirror Notion’s CSS (fonts, spacing, colors, icons, callout styling). Ensure that media (images, videos) render correctly in the live preview pane.
+
+---
+
+### 6. AI Assistant “VibeAI”
+
+We will use precisely one model:
+
+* **Model Name:** Qwen2.5-VL-2B-Instruct
+* **Quantization:** 4-bit Q4\_K\_M (GGUF)
+* **Size:** \~0.986 GB
+* **Peak RAM Usage:** \~2.0 GB during inference
+* **Inference Speed (Snapdragon 870, No NPU):** \~13 tokens/sec
+* **Native Context Window:** 4,096 tokens (extended via in-app chunking to simulate 12K tokens)
+* **Capabilities:**
+  • **Multimodal Input:** Accepts text and images for OCR (columnar PDFs, scanned medical books, diagrams).
+  • **Summarization:** Generates high-quality summaries of long text and multi-document inputs.
+  • **Coding Assistance:** Produces and explains code in multiple programming languages.
+  • **Instruction-Following:** Handles complex queries, outputs structured JSON, performs rephrasing, brainstorming, and diagram creation (Mermaid).
+  • **Voice Output:** Uses on-device TTS (e.g., Flutter’s `flutter_tts` plugin) to read generated text aloud with a natural, Siri-like voice—**no external API keys required**.
+  • **Streaming Generation:** Supports partial token streaming so the user sees responses in real time without freezing.
+  • **Embedding & RAG:** Computes embeddings on-device (e.g., via a lightweight sentence transformer), stores them in SQLite, and powers “Related Pages” via HNSW ANN index.
+  • **Networking Modes:**
+  – **Local Only Mode:** All inference is local; no internet or API keys are necessary.
+  – **Online Assist Mode:** Optionally, fetch Google search results or call Notion API for live data when connectivity is available.
+  – **Runtime Switch:** Users can toggle between Local or Online modes mid-chat.
+  • **Voice Wake-Word Activation (“Hello Qwen”):**
+  – User can say “Hello Qwen” anywhere, even when Neonote is in the background, to trigger a Siri-like halo animation around the screen and start listening—fully offline, no API keys or internet required.
+  – Once activated, the AI listens via an on-device speech recognizer, processes speech to text, generates a response, and speaks it aloud.
+  – While conversing, if the user requests “Generate a new page,” the AI asks follow-up questions: “Which database should I save it under? What title would you like? Should I include hyperlinks to source pages as citations or no? Which tags should I apply?”
+  – The user’s choices (database, title, citation hyperlinks, tags) are stored in SQLite and used to create the new page folder and metadata.
+  – The Siri-like animation, AI interface, and overall UI during voice interaction must adhere to Apple’s design aesthetic (smooth curves, translucent backdrops, fluid animations).
+  • **Markdown Generation & Directory-Based Q\&A:**
+  – The AI must be able to generate new Markdown files on demand. When the user asks for a new page or content, the AI generates a properly formatted Markdown file (including YAML front-matter) and saves it to the selected database folder.
+  – When offline, the AI should prompt: “Please select the root directory of your exported Markdown notes.” The user selects a top-level folder (created by Neonote during export).
+  – The AI then indexes all Markdown files, images, audio, videos, PDFs, and other media under that directory. For any offline query, the AI searches within this directory—across text, embedded YAML metadata, OCR’d images/PDFs, and audio transcripts—providing detailed answers.
+  – Each answer must include citations: dynamic links that, when clicked, open the corresponding Markdown file at the exact line with the relevant text highlighted. For media sources (images, audio, video, PDF), similarly link to the file and timestamp or page/area where the content is found, highlighting or annotating as needed.
+  – This effectively turns Neonote’s AI into an offline Agent that can reference the user’s entire knowledge base stored in Markdown and accompanying media.
+
+#### 6.1 Handling Large Contexts (Up to 12K Tokens) via In-App Chunking
+
+1. **Benchmark Device Performance**
+   • On app startup or model load, run a quick benchmark with a sample prompt (\~500 tokens) to measure tokens/sec (tps) and peak memory usage.
+   • Based on tps, choose an initial chunk size.
+
+2. **Determine Chunk Size Dynamically**
+   • If measured tps > 12 → chunk size = 4,000 tokens
+   • If 8 ≤ tps ≤ 12 → chunk size = 3,000 tokens
+   • If tps < 8 → chunk size = 2,000 tokens
+   • Maintain a minimum chunk size of 1,000 tokens to prevent inefficiencies.
+
+3. **Split Input into Overlapping Chunks**
+
+   ```dart
+   import 'package:tokenizers/tokenizers.dart';
+
+   Future<List<String>> chunkText(String text, int maxTokens, int overlapTokens) async {
+     final tokenizer = await Tokenizer.fromFile('tokenizer.json');
+     final encoding = await tokenizer.encode(text);
+     List<String> chunks = [];
+     int start = 0;
+     while (start < encoding.ids.length) {
+       int end = (start + maxTokens).clamp(0, encoding.ids.length);
+       final chunkIds = encoding.ids.sublist(start, end);
+       final chunkStr = await tokenizer.decode(chunkIds);
+       chunks.add(chunkStr);
+       start = end - overlapTokens;
+       if (start < 0) start = 0;
+     }
+     return chunks;
+   }
+   ```
+
+   • Example for 12K tokens, `chunkSize = 4K`, `overlap = 200`:
+   – Chunk 1: tokens 0‒4,000
+   – Chunk 2: tokens 3,800‒7,800
+   – Chunk 3: tokens 7,600‒11,600
+
+4. **Sequential Inference & Context Summarization**
+
+   ```dart
+   Future<String> generateWithChunks(
+     String largeInput, QwenModel model, int chunkSize, int overlap) async {
+     final chunks = await chunkText(largeInput, chunkSize, overlap);
+     String contextSummary = '';
+     String combinedAnswer = '';
+     for (int i = 0; i < chunks.length; i++) {
+       String prompt = contextSummary.isNotEmpty
+         ? '$contextSummary\n\n${chunks[i]}'
+         : chunks[i];
+       final response = await model.generateText(prompt, maxTokens: 1024);
+       combinedAnswer += response + '\n';
+       // Summarize this chunk’s response for next context
+       contextSummary = await model.generateText(
+         'Summarize the following in one paragraph for context continuation:\n$response',
+         maxTokens: 200,
+       );
+     }
+     // Final pass to ensure cohesiveness
+     final cohesive = await model.generateText(
+       'Please refine and merge the following combined answer so it reads as one coherent response:\n$combinedAnswer',
+       maxTokens: 500,
+     );
+     return cohesive.trim();
+   }
+   ```
+
+5. **Adaptive Generation Length & Streaming**
+
+   ```dart
+   Stream<String> streamGenerate(
+     String prompt, QwenModel model, int deviceTps) async* {
+     int generated = 0;
+     String generatedText = '';
+     int batchSize = deviceTps > 12 ? 200 : 100;
+     while (true) {
+       final subPrompt = '$prompt\n\nContinue from here:\n$generatedText';
+       final partial = await model.generateText(subPrompt, maxTokens: batchSize);
+       if (partial.trim().isEmpty) break;
+       generatedText += partial;
+       yield partial;
+       generated += batchSize;
+       if (generated > 2000) break; // Or your app’s limit
+     }
+   }
+   ```
+
+   • Use a `StreamBuilder` in Flutter to append tokens as they arrive, showing progress to keep the UI responsive.
+
+6. **Merging & Smoothing Answers**
+
+   * After combining all chunk responses, remove any overlapping or duplicated segments.
+   * Optionally run a final “coherence check” prompt:
+
+     ```dart
+     final finalAnswer = await model.generateText(
+       'Refine the following combined answer to ensure smooth flow and no repetitions:\n$combinedAnswer',
+       maxTokens: 200
+     );
+     ```
+   * This ensures the user sees one cohesive answer without noticing the chunking behind the scenes.
+
+7. **Voice Output Integration**
+
+   ```dart
+   import 'package:flutter_tts/flutter_tts.dart';
+
+   final FlutterTts flutterTts = FlutterTts();
+
+   Future<void> speak(String text) async {
+     await flutterTts.setLanguage('en-US');
+     await flutterTts.setSpeechRate(0.5);
+     await flutterTts.speak(text);
+   }
+   ```
+
+   * Call `speak(finalAnswer)` after generation (or stream partials) so the AI “speaks” its response aloud in a Siri-like voice.
+
+---
+
+### 7. Graph View & Mermaid
+
+* **Graph View:**
+  • Use `flutter_graph_view` (pure Dart) or embed D3.js via a WebView for interactive force-directed graphs. Nodes represent pages; edges represent internal links and backlinks.
+  • Support pan/zoom, lazy-load neighbors, and filters by tags/dates.
+* **Mermaid Integration:**
+  • Wrap Mermaid code blocks in `<div class="mermaid">` and render using a WebView that loads Mermaid.js.
+  • Style the output to mimic Notion panels (consistent fonts, padding, and colors).
+  • Provide a “Refresh Diagram” button that re-renders Mermaid blocks on demand.
+
+---
+
+### 8. End-User Customization
+
+* **Style Panel:**
+  • Allow users to choose fonts (Serif, Sans-serif), color themes (Light, Dark, Sepia), block spacing, callout icons, and grid layouts. Persist preferences in SQLite.
+* **Plugins/Themes:**
+  • Provide a sandboxed JS/CSS API for user-installed themes/plugins.
+  • On desktop, allow Rust/Tauri extensions for advanced functionality (e.g., custom file watchers, external exports).
+* **Templates & Databases:**
+  • In-app template editor to generate JSON schemas for pages and databases.
+  • Let users define database schemas (columns, types) that map to SQLite tables.
+* **Keyboard Shortcuts:**
+  • Recreate Notion’s shortcuts (e.g., `Ctrl+Shift+L` to toggle list, `Cmd+D` to duplicate block) on each platform using Flutter’s `Shortcuts` and `Actions` APIs.
+
+---
+
+### 9. Search & Navigation (Obsidian-Style)
+
+**Goal:** Support **fast, accurate** search across **up to 1,000,000+ folders/pages**, including full-text, tag filtering, result highlighting, and direct navigation—**with zero lag**.
+
+#### 9.1 Underlying Index & Data Structures
+
+* **SQLite FTS5 (Full-Text Search):**
+  • Create FTS table:
+
+  ```sql
+  CREATE VIRTUAL TABLE pages_fts USING fts5(page_id, content, tags);
+  CREATE TABLE pages_meta(page_id TEXT PRIMARY KEY, filepath TEXT, title TEXT, tags TEXT);
+  ```
+
+  • On page create/update, insert or update FTS and meta tables.
+* **Inverted Index & Optimizations:**
+  • Set `PRAGMA mmap_size = 268435456;` // 256 MB memory-mapped I/O
+  • Set `PRAGMA cache_size = -2000;` // 2,000 pages (\~2 MB) of caching
+  • Use `PRAGMA auto_vacuum = INCREMENTAL;` to maintain index size.
+  • Journal mode: `PRAGMA journal_mode = WAL;` for concurrent read/write.
+
+#### 9.2 Search Bar Functionality
+
+* **Instant Search as You Type:**
+  • Use Flutter’s `TextField` with a 200 ms debounce to avoid flooding queries.
+  • On each keystroke, run:
+
+  ```sql
+  SELECT page_id, snippet(pages_fts, -1, '<b>', '</b>', '...', 10) AS snippet
+  FROM pages_fts
+  WHERE pages_fts MATCH ?
+  ORDER BY rank
+  LIMIT 50;
+  ```
+
+  • Display page titles, snippet with highlighted terms, and tag icons.
+
+* **Tag Filtering:**
+  • Allow typing `#TagName` or selecting from a dropdown.
+  • Modified query:
+
+  ```sql
+  SELECT page_id, snippet(pages_fts, -1, '<b>', '</b>', '...', 10) AS snippet
+  FROM pages_fts
+  JOIN pages_meta USING(page_id)
+  WHERE pages_fts MATCH ? AND tags LIKE '%TagName%'
+  ORDER BY rank
+  LIMIT 50;
+  ```
+
+* **Result Highlighting & Navigation:**
+  • When a search result is tapped, open `page.md`, then scroll to and highlight the matched term.
+  • Use a Flutter `ScrollController` and a custom `RichText`/`Markdown` widget that can jump to the offset of the matching line.
+  • Highlight matches by wrapping them in `<mark>`-like spans with a distinct background color.
+
+#### 9.3 Handling Millions of Pages
+
+* **Incremental Indexing:**
+  • During initial setup or a large import, index pages in batches of 10,000.
+  • Show a progress UI (percentage complete).
+  • Use `PRAGMA synchronous = NORMAL;` during bulk insert, then switch to `FULL` for stability.
+* **Asynchronous Queries:**
+  • Run all search queries and indexing in a Dart `Isolate` or native thread.
+  • Return results via `Future` or `Stream` to avoid blocking the UI.
+* **Pagination & Caching:**
+  • Use `LIMIT`/`OFFSET` for pagination or cursor-based paging.
+  • Cache top 100 recent queries and their results in memory.
+* **Memory Monitoring:**
+  • Use Dart’s `ProcessInfo.currentRss` to monitor memory usage.
+  • If memory > 80%, throttle indexing or reduce chunk sizes.
+
+#### 9.4 User Experience
+
+* **Persistent Search Bar UI:**
+  • Place a persistent search bar at the top of the main screen (like Obsidian’s “Cmd+P”).
+  • Support keyboard shortcuts (`Cmd+P` / `Ctrl+P`) to focus the search bar.
+* **Search Results List:**
+  • Show page title, snippet with highlighted keywords, and tag icons.
+  • Implement infinite scroll/pagination (load more as user scrolls).
+* **Jump-to Highlight:**
+  • On tapping a result, navigate to that page, scroll to the match, and highlight it in yellow.
+
+---
+
+### 10. Widgets & Voice Interaction Revisited
+
+* **Home Screen Widgets:**
+  • Android & iOS widgets that show:
+  – “Ask Qwen” button to wake the AI.
+  – Quick “New Page” shortcut.
+* **Voice Interaction Outside App (“Hello Qwen”):**
+  • Use on-device speech APIs to listen for “Hello Qwen” offline—no API keys or internet required.
+  • Trigger a Siri-like animation overlay (pulsing halo around edges).
+  • AI listens via on-device speech recognizer, generates a response, and reads it back via TTS.
+  • If user asks “Create a page,” AI asks “Choose a database, what title, and do you want hyperlinks to source pages as citations? Which tags?”
+  • Based on user replies, AI creates and saves the new page in the chosen database with appropriate metadata and tags.
+
+---
+
+### 11. Background Exports & Operations
+
+* **Notion Export Import In Background:**
+  • When importing/exporting large sets of pages from Notion, run in a background Isolate or native service.
+  • Show progress in notifications (Android) or status bar (iOS/macOS).
+  • Allow user to continue browsing and editing other pages while export/import runs in the background.
+  • Once complete, show a notification: “Export from Notion finished—X pages imported.”
+
+---
+
+### 12. Code Quality & CI/CD
+
+* **Module Structure:**
+  • `models/blocks.dart`, `storage/` (SQLite, Git), `ui/blocks/` (block widgets), `ui/ai/` (AI chat, streaming), `ui/search/` (search bar, results, highlighting), `graph/` (graph view), `widgets/` (home screen and lock screen widgets), `md/` (Markdown import/export), `plugins/` (JS/CSS for theming), `ci/` (CI scripts).
+* **Tests:**
+  • Unit tests for block parsing, widget rendering, import/export functionality, AI chunking and streaming logic, search index queries, voice wake-word activation, and background tasks.
+  • Use `flutter_test` and `mockito` to mock SQLite, llama.cpp, and speech APIs.
+* **GitHub Actions CI:**
+
+  1. **Checkout & Flutter Setup**
+
+     ```yaml
+     - uses: actions/checkout@v3
+     - name: Setup Flutter
+       uses: subosito/flutter-action@v2
+       with:
+         flutter-version: "3.0.0"
+     - name: Install Dependencies
+       run: flutter pub get
+     ```
+  2. **Download Qwen2.5-VL-2B Q4\_K\_M**
+
+     ```yaml
+     - name: Download Qwen2.5-VL-2B Q4_K_M
+       run: |
+         pip install huggingface-hub
+         huggingface-cli download bartowski/Qwen2-VL-2B-Instruct-GGUF \
+           --include "Qwen2-VL-2B-Instruct-Q4_K_M.gguf" --local-dir lib/ai/
+     ```
+  3. **Compile llama.cpp**
+
+     ```yaml
+     - name: Build llama.cpp
+       run: |
+         git clone https://github.com/ggerganov/llama.cpp.git
+         cd llama.cpp
+         mkdir build && cd build
+         cmake -DLLAMA_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release ..
+         make -j$(nproc)
+         cp libllama.so ../../lib/ai/
+     ```
+  4. **Run Tests**
+
+     ```yaml
+     - name: Run Flutter Tests
+       run: flutter test
+     ```
+* **Documentation:**
+  • Provide a comprehensive README with:
+
+  1. **Setup Instructions:** Installing Flutter, NDK for Android, Xcode for iOS.
+  2. **Model Download & Placement:** How to fetch Qwen2.5-VL-2B Q4\_K\_M and put it under `lib/ai/`.
+  3. **Chunking Logic Explanation:** Describe how to handle large contexts up to 12K tokens.
+  4. **Voice Integration:** Steps to configure on-device “Hello Qwen” wake-word detection and TTS for voice responses—fully offline, no API keys.
+  5. **Search Setup:** How to build SQLite FTS index for millions of pages and achieve Obsidian-like performance.
+  6. **Widget Setup:** Guide for home screen and lock screen widgets on iOS and Android.
+  7. **Background Tasks:** How to enable background exports/imports from Notion while the app remains usable.
+
+---
+
+### 13. UI Design
+
+* Use the same Apple UI design style as demonstrated in [Neonote Vibe Flow GitHub project](https://github.com/AM2201NE/neonote-vibe-flow.git).
+
+---
+
+### 14. API Integration
+
+* Provide a section where users can input their Notion API key and save it with a custom user-defined name for future selection. The app must:
+
+  * Allow users to assign and save API keys with custom names.
+  * Select and switch between saved API keys.
+  * Provide previews of Notion pages within the app.
+
+---
+
+### 15. File Export Structure
+
+* Export Notion pages as follows:
+
+  ```
+  [Selected Export Directory]/
+  ├── My_Page_Title_1/          # Folder named after the Notion page
+  │   ├── My_Page_Title_1.md    # Markdown file with page content
+  │   └── media/                # Media folder for this page
+  │       ├── image1.jpg
+  │       ├── video.mp4
+  │       └── document.pdf
+  ├── My_Page_Title_2/
+  │   ├── My_Page_Title_2.md
+  │   └── media/
+  │       └── ...
+  └── ...
+  ```
+
+* Include all tags at the top of each exported Markdown file.
+
+* Embed comments into custom blocks, positioned exactly as they appear in Notion.
+
+---
+
+### 16. Additional Features
+
+1. **Notifications:**
+
+   * Allow pages to sync in the background on all devices.
+   * Display task progress in the notification center (non-removable until stopped or paused).
+   * Include app logo in notifications.
+   * Provide controls to stop, pause, or resume tasks from the notification center.
+
+2. **Widgets:**
+
+   * Offer widgets for all platforms, including one to access the AI directly.
+   * Enable voice interaction with the AI, similar to Gemini, Google Assistant, or Siri. The AI should be activated outside the app by saying the app's name “Neonote,” which triggers a cool animation resembling Siri's style. The animation, AI interface, and overall UI must align with Apple’s design aesthetic.
+
+3. **Language Support:**
+
+   * Support all languages except Hebrew for the app UI and AI interactions.
+   * Ensure AI responses match the user’s input language.
+
+4. **AI Modes:**
+
+   * **Local Data Mode:** Responds based on local data chosen by the user.
+   * **Cloud Data Mode:** Fetches data from Notion API or Google Drive.
+   * **Search Mode:** Fetches answers from Google.
+   * Allow mode switching mid-conversation or voice chat.
+
+---
+
+### 17. Final Delivery
+
+* Provide the complete Flutter project as a single download, including all code, configurations, tests, and documentation.
+* Embed all necessary AI models and dependencies for seamless local execution.
+* Ensure the project is production-ready, fully functional on all platforms, and can be immediately tested and deployed by the user.
+
+---
+
+## Additional Requirements & Safeguards
+
+1. **No Undesired Outcomes:**
+
+   * Implement thorough error handling: if the model runs out of memory or crashes, automatically retry with a smaller chunk size (e.g., from 4K to 2K tokens).
+   * Provide clear fallback messages: “Memory exceeded—retrying with smaller context.”
+   * If inference fails repeatedly, suggest using a lower quantization (e.g., switch to Q3\_K\_M).
+
+2. **Prevent Glitches & Lag:**
+
+   * Offload heavy tasks (search indexing, large chunk inference, voice wake detection, background Notion export) to Dart Isolates or native threads to keep the UI thread free.
+   * Monitor RAM usage (`ProcessInfo.currentRss`); if usage > 80%, reduce chunk size automatically.
+   * Throttle inference if thermal sensors indicate high CPU temperature; insert small delays between chunk calls.
+
+3. **True Helpfulness & Cohesion:**
+
+   * Provide “Regenerate” and “Refine” buttons for AI responses.
+   * Implement a “Context Review” step: after merging chunk answers, run a small “coherence check” prompt:
+
+     ```dart
+     final polished = await model.generateText(
+       'Review the following combined answer. Fix any awkward transitions, remove redundancy, and keep it cohesive:\n$combinedAnswer',
+       maxTokens: 200,
+     );
+     ```
+   * Use that polished text for final display and voice output.
+
+4. **Privacy & Data Safety:**
+
+   * All AI inference, search indexing, and data storage happen locally—no user data is sent to any server unless explicitly enabled via “Online Assist Mode.”
+   * Document how Neonote complies with GDPR and other privacy regulations (data stays on-device by default).
+
+---
+
+You (the AI) will now generate the entire Neonote project—**including code, assets, configuration, and documentation**—according to this comprehensive prompt. Ensure the final solution seamlessly integrates Qwen2.5-VL-2B-Instruct Q4\_K\_M as the offline AI assistant; dynamic chunking (up to 12K tokens); Siri-like, always-listening wake-word activation (“Hello Qwen”), fully offline with no external API keys; Markdown generation and directory-based offline Q\&A with citations; Obsidian-style search performance for millions of pages; background export/import; and a polished, production-ready cross-platform implementation.
