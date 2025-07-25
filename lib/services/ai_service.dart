@@ -7,6 +7,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../ffi/llama_bindings.dart';
 import '../ai/llm_interface.dart';
+import '../config.dart';
 
 class AIService implements LLMInterface {
   static final AIService _instance = AIService._internal();
@@ -51,8 +52,11 @@ class AIService implements LLMInterface {
       _isInitialized = _model != null && _context != null;
       debugPrint('AI service initialized successfully: $_isInitialized');
       return _isInitialized;
+    } on DllNotFoundException catch (e) {
+      debugPrint('Failed to load native library: $e');
+      return false;
     } catch (e) {
-      debugPrint('Failed to initialize AI service: $e');
+      debugPrint('An unexpected error occurred during AI service initialization: $e');
       return false;
     }
   }
@@ -60,22 +64,26 @@ class AIService implements LLMInterface {
   // Get library path based on platform
   Future<String?> _getLibraryPath() async {
     if (kIsWeb) return null;
-    
-    if (Platform.isWindows) {
-      return 'llama.dll';
-    } else if (Platform.isLinux) {
-      final appDir = await getApplicationSupportDirectory();
-      return path.join(appDir.path, 'native', 'linux', 'libllama.so');
-    } else if (Platform.isMacOS) {
-      final appDir = await getApplicationSupportDirectory();
-      return path.join(appDir.path, 'native', 'macos', 'libllama.dylib');
-    } else if (Platform.isAndroid) {
-      return 'libllama.so';
-    } else if (Platform.isIOS) {
-      return 'libllama.dylib';
+
+    const libNameMap = {
+      'windows': 'llama.dll',
+      'linux': 'libllama.so',
+      'macos': 'libllama.dylib',
+      'android': 'libllama.so',
+      'ios': 'libllama.dylib',
+    };
+
+    final platform = Platform.operatingSystem;
+    if (!libNameMap.containsKey(platform)) {
+      return null;
     }
-    
-    return null;
+
+    if (platform == 'windows' || platform == 'android') {
+      return libNameMap[platform];
+    }
+
+    final appDir = await getApplicationSupportDirectory();
+    return path.join(appDir.path, 'native', platform, libNameMap[platform]!);
   }
   
   // Load model
@@ -118,8 +126,10 @@ class AIService implements LLMInterface {
       }
       
       debugPrint('Model loaded successfully');
+    } on FileSystemException catch (e) {
+      debugPrint('Failed to load model due to a file system error: $e');
     } catch (e) {
-      debugPrint('Failed to load model: $e');
+      debugPrint('An unexpected error occurred while loading the model: $e');
     }
   }
   
@@ -135,7 +145,7 @@ class AIService implements LLMInterface {
         await modelDir.create(recursive: true);
       }
       
-      final modelPath = path.join(modelDir.path, 'Qwen2-VL-2B-Instruct-Q4_K_M.gguf');
+      final modelPath = path.join(modelDir.path, AppConfig.modelName);
       final modelFile = File(modelPath);
       
       if (await modelFile.exists()) {
@@ -159,6 +169,13 @@ class AIService implements LLMInterface {
     }
   }
   
+  Future<bool> _ensureInitialized() async {
+    if (!_isInitialized || _context == nullptr) {
+      await initialize();
+    }
+    return _isInitialized && _context != nullptr;
+  }
+
   // Generate text
   @override
   Future<String> generateText(String prompt, {
@@ -168,11 +185,8 @@ class AIService implements LLMInterface {
     int seed = 42,
     void Function(String)? onToken,
   }) async {
-    if (!_isInitialized || _context == nullptr) {
-      await initialize();
-      if (!_isInitialized || _context == nullptr) {
-        return 'AI service is not initialized properly';
-      }
+    if (!await _ensureInitialized()) {
+      return 'AI service is not initialized properly';
     }
     
     try {
@@ -260,11 +274,8 @@ class AIService implements LLMInterface {
     int seed = 42,
     void Function(String)? onToken,
   }) async {
-    if (!_isInitialized || _context == nullptr) {
-      await initialize();
-      if (!_isInitialized || _context == nullptr) {
-        return 'AI service is not initialized properly';
-      }
+    if (!await _ensureInitialized()) {
+      return 'AI service is not initialized properly';
     }
     
     try {

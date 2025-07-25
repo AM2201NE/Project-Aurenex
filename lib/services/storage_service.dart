@@ -10,59 +10,58 @@ import '../models/blocks/block_factory.dart';
 import '../models/page.dart';
 
 class StorageService {
-  // Returns a writable directory, typically user's LOCALAPPDATA on Windows
   Future<String> getWritableDirectory() async {
-    Directory? writableDir;
-    String? fallbackPath;
+    final List<Future<String?>> potentialPaths = [
+      _getPrimaryPath(),
+      _getFallbackPath(),
+    ];
+
+    for (final futurePath in potentialPaths) {
+      final path = await futurePath;
+      if (path != null && await _isWritable(path)) {
+        return path;
+      }
+    }
+
+    throw Exception('No writable directory found. Please check permissions.');
+  }
+
+  Future<String?> _getPrimaryPath() async {
     if (Platform.isWindows) {
       final localAppData = Platform.environment['LOCALAPPDATA'];
-      debugPrint('LOCALAPPDATA: $localAppData');
-      writableDir = Directory(join(localAppData ?? '', 'Neonote'));
-      debugPrint('Primary writableDir: ${writableDir.path}');
-      fallbackPath = join(Platform.environment['USERPROFILE'] ?? '', 'Documents', 'neonote_data');
-      debugPrint('Fallback path: $fallbackPath');
-    } else {
-      writableDir = await getApplicationDocumentsDirectory();
-      debugPrint('Non-Windows writableDir: ${writableDir.path}');
-    }
-    final writablePath = join(writableDir.path, 'neonote_data');
-    final rootDir = Directory(writablePath);
-    debugPrint('Testing primary writablePath: $writablePath');
-    try {
-      if (!await rootDir.exists()) {
-        debugPrint('Creating rootDir: $writablePath');
-        await rootDir.create(recursive: true);
+      if (localAppData != null) {
+        return join(localAppData, 'Neonote', 'neonote_data');
       }
-      // Test write permission
-      final testFile = File(join(writablePath, 'test_write.txt'));
-      debugPrint('Testing write to: ${testFile.path}');
+    } else {
+      final appDir = await getApplicationDocumentsDirectory();
+      return join(appDir.path, 'neonote_data');
+    }
+    return null;
+  }
+
+  Future<String?> _getFallbackPath() async {
+    if (Platform.isWindows) {
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile != null) {
+        return join(userProfile, 'Documents', 'neonote_data');
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _isWritable(String path) async {
+    try {
+      final dir = Directory(path);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      final testFile = File(join(path, 'test_write.txt'));
       await testFile.writeAsString('test');
       await testFile.delete();
-      debugPrint('Primary writable directory succeeded.');
-      return writablePath;
+      return true;
     } catch (e) {
-      debugPrint('Primary writable directory failed: $e');
-      // Try fallback to Documents
-      if (fallbackPath != null) {
-        final fallbackDir = Directory(fallbackPath);
-        debugPrint('Testing fallbackDir: $fallbackPath');
-        try {
-          if (!await fallbackDir.exists()) {
-            debugPrint('Creating fallbackDir: $fallbackPath');
-            await fallbackDir.create(recursive: true);
-          }
-          final testFile = File(join(fallbackPath, 'test_write.txt'));
-          debugPrint('Testing write to fallback: ${testFile.path}');
-          await testFile.writeAsString('test');
-          await testFile.delete();
-          debugPrint('Fallback to Documents succeeded.');
-          return fallbackPath;
-        } catch (e2) {
-          debugPrint('Fallback writable directory also failed: $e2');
-        }
-      }
-      debugPrint('No writable directory found. Please check permissions.');
-      throw Exception('No writable directory found. Please check permissions.');
+      debugPrint('Path is not writable: $path, error: $e');
+      return false;
     }
   }
 
@@ -111,24 +110,6 @@ class StorageService {
     if (_database != null) return _database!;
     _database = await _init();
     return _database!;
-
-  // For fallback: get database at custom directory
-  Future<Database> getDatabaseAt(String customPath) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-    final dbPath = join(customPath, 'neonote.db');
-    final db = await openDatabase(
-      dbPath,
-      version: 1,
-      onCreate: _createDatabase,
-    );
-    await db.execute('PRAGMA journal_mode = WAL');
-    await db.execute('PRAGMA synchronous = NORMAL');
-    await db.execute('PRAGMA cache_size = 1000');
-    return db;
-  }
   }
 
   Future<Database> _init() async {
@@ -160,8 +141,11 @@ class StorageService {
       await db.execute('PRAGMA synchronous = NORMAL');
       await db.execute('PRAGMA cache_size = 1000');
       return db;
+    } on DatabaseException catch (e) {
+      debugPrint('A database error occurred while opening the database at $dbPath: $e');
+      rethrow;
     } catch (e) {
-      debugPrint('Error opening database at $dbPath: $e');
+      debugPrint('An unexpected error occurred while opening the database at $dbPath: $e');
       rethrow;
     }
   }
@@ -308,23 +292,24 @@ class StorageService {
       // Save blocks
       for (int i = 0; i < page.blocks.length; i++) {
         final block = page.blocks.values.elementAt(i);
-        final blockMap = block.toMap();
-        // Defensive: ensure block_id, page_id, type, and content are non-null strings
-        blockMap['block_id'] = (blockMap['block_id'] != null && blockMap['block_id'].toString().isNotEmpty && blockMap['block_id'].toString() != 'null') ? blockMap['block_id'].toString() : 'unknown_block_id_${i}_${DateTime.now().millisecondsSinceEpoch}';
-        blockMap['page_id'] = (page.id.toString().isNotEmpty && page.id.toString() != 'null') ? page.id.toString() : 'unknown_page_id';
-        blockMap['type'] = (blockMap['type'] != null && blockMap['type'].toString().isNotEmpty && blockMap['type'].toString() != 'null') ? blockMap['type'].toString() : 'unknown_type';
-        blockMap['content'] = (blockMap['content'] != null) ? blockMap['content'].toString() : '';
-        blockMap['metadata'] = (blockMap['metadata'] != null) ? blockMap['metadata'].toString() : '';
-        blockMap['position'] = i;
-        // Defensive: log blockMap before insert
-        debugPrint('Inserting block: $blockMap');
+        final blockMap = _sanitizeBlockData(block.toMap(), page.id, i);
         await txn.insert(
           'blocks',
           blockMap,
-          conflictAlgorithm: ConflictAlgorithm.replace
+          conflictAlgorithm: ConflictAlgorithm.replace,
         );
       }
     });
+  }
+
+  Map<String, dynamic> _sanitizeBlockData(Map<String, dynamic> blockMap, String pageId, int position) {
+    blockMap['block_id'] = blockMap['block_id']?.toString() ?? 'unknown_block_id_${position}_${DateTime.now().millisecondsSinceEpoch}';
+    blockMap['page_id'] = pageId;
+    blockMap['type'] = blockMap['type']?.toString() ?? 'unknown_type';
+    blockMap['content'] = blockMap['content']?.toString() ?? '';
+    blockMap['metadata'] = blockMap['metadata']?.toString() ?? '';
+    blockMap['position'] = position;
+    return blockMap;
   }
 
   Future<void> deletePage(String id) async {
@@ -371,109 +356,43 @@ class StorageService {
       debugPrint('Returning workspace data: ${workspacesData.first}');
       // Defensive copy to ensure mutability and fix type errors
       final workspace = Map<String, dynamic>.from(workspacesData.first);
-      // Defensive: log all fields and types
-      workspace.forEach((k, v) {
-        debugPrint('Workspace field: $k, type=${v?.runtimeType}, value=$v');
-      });
-      // Force all workspace fields to default values if null, empty, or invalid
-      workspace['id'] = (workspace['id'] is String && workspace['id'] != null && workspace['id'].toString().isNotEmpty && workspace['id'].toString() != 'null') ? workspace['id'].toString() : 'default';
-      workspace['name'] = (workspace['name'] is String && workspace['name'] != null && workspace['name'].toString().isNotEmpty && workspace['name'].toString() != 'null') ? workspace['name'].toString() : 'Default Workspace';
-      workspace['description'] = (workspace['description'] is String && workspace['description'] != null && workspace['description'].toString().isNotEmpty && workspace['description'].toString() != 'null') ? workspace['description'].toString() : '';
-      workspace['createdAt'] = (workspace['createdAt'] is int && workspace['createdAt'] != null) ? workspace['createdAt'] : DateTime.now().millisecondsSinceEpoch;
-      workspace['updatedAt'] = (workspace['updatedAt'] is int && workspace['updatedAt'] != null) ? workspace['updatedAt'] : DateTime.now().millisecondsSinceEpoch;
-      // Defensive: always encode pages as JSON string
-      if (workspace['pages'] == null || workspace['pages'] == '' || workspace['pages'] == 'null') {
-        workspace['pages'] = jsonEncode({});
-      } else if (workspace['pages'] is String) {
-        try {
-          final decodedPages = jsonDecode(workspace['pages']);
-          if (decodedPages is Map) {
-            workspace['pages'] = jsonEncode(decodedPages);
-          } else {
-            workspace['pages'] = jsonEncode({});
-          }
-        } catch (e) {
-          workspace['pages'] = jsonEncode({});
-        }
-      } else if (workspace['pages'] is Map) {
-        workspace['pages'] = jsonEncode(workspace['pages']);
-      } else {
-        workspace['pages'] = jsonEncode({});
-      }
-      // Defensive: always encode pageOrder as JSON string, and ensure all IDs are String
-      if (workspace['pageOrder'] == null || workspace['pageOrder'] == '' || workspace['pageOrder'] == 'null') {
-        workspace['pageOrder'] = jsonEncode([]);
-      } else if (workspace['pageOrder'] is String) {
-        try {
-          final decodedOrder = jsonDecode(workspace['pageOrder']);
-          if (decodedOrder is List) {
-            final safeList = decodedOrder.map((e) => e == null ? '' : e.toString()).where((e) => e.isNotEmpty && e != 'null').toList();
-            workspace['pageOrder'] = jsonEncode(safeList);
-          } else {
-            workspace['pageOrder'] = jsonEncode([]);
-          }
-        } catch (e) {
-          workspace['pageOrder'] = jsonEncode([]);
-        }
-      } else if (workspace['pageOrder'] is List) {
-        final safeList = (workspace['pageOrder'] as List).map((e) => e == null ? '' : e.toString()).where((e) => e.isNotEmpty && e != 'null').toList();
-        workspace['pageOrder'] = jsonEncode(safeList);
-      } else {
-        workspace['pageOrder'] = jsonEncode([]);
-      }
-      // Defensive: always encode settings as JSON string
-      if (workspace['settings'] == null || workspace['settings'] == '' || workspace['settings'] == 'null') {
-        workspace['settings'] = '{}';
-      } else if (workspace['settings'] is String) {
-        try {
-          final decodedSettings = jsonDecode(workspace['settings']);
-          if (decodedSettings is Map) {
-            workspace['settings'] = jsonEncode(decodedSettings);
-          } else {
-            workspace['settings'] = '{}';
-          }
-        } catch (e) {
-          workspace['settings'] = '{}';
-        }
-      } else if (workspace['settings'] is Map) {
-        workspace['settings'] = jsonEncode(workspace['settings']);
-      } else {
-        workspace['settings'] = '{}';
-      }
-      // Extra: check for nulls and log
-      // Final patch: guarantee pageOrder is always a valid list of strings
-      if (workspace['pageOrder'] == null || workspace['pageOrder'] == '' || (workspace['pageOrder'] is String && workspace['pageOrder'] == '[]')) {
-        workspace['pageOrder'] = jsonEncode([]);
-      } else {
-        try {
-          List<dynamic> checkList = [];
-          if (workspace['pageOrder'] is String) {
-            checkList = jsonDecode(workspace['pageOrder']);
-          } else if (workspace['pageOrder'] is List) {
-            checkList = workspace['pageOrder'];
-          }
-          final safeList = checkList.map((e) => e == null ? '' : e.toString()).where((e) => e.isNotEmpty && e != 'null').toList();
-          workspace['pageOrder'] = jsonEncode(safeList);
-        } catch (e) {
-          debugPrint('ERROR: Exception during final pageOrder check, forcibly resetting to empty list: $e');
-          workspace['pageOrder'] = jsonEncode([]);
-        }
-      }
-      workspace.forEach((k, v) {
-        if (v == null || v == '' || v == 'null') debugPrint('Workspace field $k is NULL/empty/invalid!');
-      });
-      debugPrint('Workspace data after null checks: $workspace');
-      // Print stack trace for error analysis
-      try {
-        throw Exception('Workspace field validation stack trace');
-      } catch (e, stack) {
-        debugPrint('Workspace field validation stack trace: $stack');
-      }
+      _sanitizeWorkspaceData(workspace);
       return workspace;
     } catch (e) {
       debugPrint('Error loading workspace: $e');
       rethrow;
     }
+  }
+
+  void _sanitizeWorkspaceData(Map<String, dynamic> data) {
+    data['id'] = data['id']?.toString() ?? 'default';
+    data['name'] = data['name']?.toString() ?? 'Default Workspace';
+    data['description'] = data['description']?.toString() ?? '';
+    data['createdAt'] = data['createdAt'] is int ? data['createdAt'] : DateTime.now().millisecondsSinceEpoch;
+    data['updatedAt'] = data['updatedAt'] is int ? data['updatedAt'] : DateTime.now().millisecondsSinceEpoch;
+    data['pages'] = _sanitizeJsonField(data['pages'], {});
+    data['pageOrder'] = _sanitizeJsonField(data['pageOrder'], []);
+    data['settings'] = _sanitizeJsonField(data['settings'], {});
+  }
+
+  String _sanitizeJsonField(dynamic value, dynamic defaultValue) {
+    if (value == null || value == '' || value == 'null') {
+      return jsonEncode(defaultValue);
+    }
+    if (value is String) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map || decoded is List) {
+          return jsonEncode(decoded);
+        }
+      } catch (e) {
+        // fall through to default
+      }
+    }
+    if (value is Map || value is List) {
+      return jsonEncode(value);
+    }
+    return jsonEncode(defaultValue);
   }
 
   Future<void> saveWorkspaceData(Map<String, dynamic> data) async {
