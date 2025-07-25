@@ -44,13 +44,8 @@ class HomeScreenState extends State<HomeScreen> {
   
   Future<void> _loadWorkspace() async {
     try {
-      _workspace = await _loadAndParseWorkspace();
       _pages = await widget.storageService.getAllPages();
-      final pagesMap = <String, page_model.Page>{};
-      for (final page in _pages) {
-        pagesMap[page.id] = page;
-      }
-      _workspace = _workspace.copyWith(pages: pagesMap);
+      _workspace = await _loadAndParseWorkspace(pages: _pages);
     } on Exception catch (e) {
       debugPrint('A known error occurred while loading workspace: $e');
       _showErrorDialog('Error Loading Workspace', e.toString());
@@ -92,11 +87,20 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<Workspace> _loadAndParseWorkspace({String? directoryOverride}) async {
+  Future<Workspace> _loadAndParseWorkspace({
+    String? directoryOverride,
+    required List<page_model.Page> pages,
+  }) async {
     final workspaceData = await widget.storageService.getWorkspaceData('default', directoryOverride: directoryOverride);
     if (workspaceData.isEmpty) {
       throw Exception('Workspace data is empty');
     }
+
+    final pagesMap = <String, page_model.Page>{};
+    for (final page in pages) {
+      pagesMap[page.id] = page;
+    }
+    workspaceData['pages'] = pagesMap;
 
     // Defensive decoding and sanitization
     _sanitizeWorkspaceData(workspaceData);

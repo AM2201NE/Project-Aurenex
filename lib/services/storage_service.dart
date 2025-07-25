@@ -354,7 +354,6 @@ class StorageService {
         };
       }
       debugPrint('Returning workspace data: ${workspacesData.first}');
-      // Defensive copy to ensure mutability and fix type errors
       final workspace = Map<String, dynamic>.from(workspacesData.first);
       _sanitizeWorkspaceData(workspace);
       return workspace;
