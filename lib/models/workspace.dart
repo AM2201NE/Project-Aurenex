@@ -156,39 +156,81 @@ class Workspace {
   }
 
   static Workspace fromJson(Map<String, dynamic> json, {page_model.Page Function(Map<String, dynamic>)? pageFromJson}) {
-    final pageMap = <String, page_model.Page>{};
-    if (json['pages'] is String && json['pages'].isNotEmpty) {
-      final decodedPages = jsonDecode(json['pages']) as Map<String, dynamic>;
-      decodedPages.forEach((key, value) {
-        if (pageFromJson != null) {
-          pageMap[key] = pageFromJson(value as Map<String, dynamic>);
-        } else {
-          pageMap[key] = page_model.Page.fromJson(value as Map<String, dynamic>);
+    try {
+      print('Workspace.fromJson input: $json');
+      final pageMap = <String, page_model.Page>{};
+      if (json['pages'] is String && json['pages'].isNotEmpty) {
+        try {
+          final decodedPages = jsonDecode(json['pages']) as Map<String, dynamic>;
+          decodedPages.forEach((key, value) {
+            if (pageFromJson != null) {
+              pageMap[key] = pageFromJson(value as Map<String, dynamic>);
+            } else {
+              pageMap[key] = page_model.Page.fromJson(value as Map<String, dynamic>);
+            }
+          });
+        } catch (e) {
+          print('Error decoding pages in Workspace.fromJson: $e');
         }
-      });
-    }
+      } else if (json['pages'] is Map) {
+        (json['pages'] as Map).forEach((key, value) {
+          if (pageFromJson != null) {
+            pageMap[key as String] = pageFromJson(value as Map<String, dynamic>);
+          } else {
+            pageMap[key as String] = page_model.Page.fromJson(value as Map<String, dynamic>);
+          }
+        });
+      }
 
-    List<String> pageOrder = [];
-    if (json['pageOrder'] is String && json['pageOrder'].isNotEmpty) {
-      final decodedPageOrder = jsonDecode(json['pageOrder']) as List<dynamic>;
-      pageOrder = decodedPageOrder.map((e) => e.toString()).toList();
-    }
+      List<String> pageOrder = [];
+      if (json['pageOrder'] is String && json['pageOrder'].isNotEmpty) {
+        try {
+          final decodedPageOrder = jsonDecode(json['pageOrder']) as List<dynamic>;
+          pageOrder = decodedPageOrder.map((e) => e.toString()).toList();
+        } catch (e) {
+          print('Error decoding pageOrder in Workspace.fromJson: $e');
+        }
+      } else if (json['pageOrder'] is List) {
+        pageOrder = (json['pageOrder'] as List).map((e) => e.toString()).toList();
+      }
 
-    Map<String, dynamic> settings = {};
-    if (json['settings'] is String && json['settings'].isNotEmpty) {
-      settings = jsonDecode(json['settings']) as Map<String, dynamic>;
-    }
+      Map<String, dynamic> settings = {};
+      if (json['settings'] is String && json['settings'].isNotEmpty) {
+        try {
+          settings = jsonDecode(json['settings']) as Map<String, dynamic>;
+        } catch (e) {
+          print('Error decoding settings in Workspace.fromJson: $e');
+        }
+      } else if (json['settings'] is Map) {
+        settings = json['settings'] as Map<String, dynamic>;
+      }
 
-    return Workspace(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Default Workspace',
-      description: json['description']?.toString() ?? '',
-      createdAt: int.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
-      updatedAt: int.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
-      pages: pageMap,
-      pageOrder: pageOrder,
-      settings: settings,
-    );
+      final workspace = Workspace(
+        id: json['id']?.toString() ?? '',
+        name: json['name']?.toString() ?? 'Default Workspace',
+        description: json['description']?.toString() ?? '',
+        createdAt: int.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
+        updatedAt: int.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
+        pages: pageMap,
+        pageOrder: pageOrder,
+        settings: settings,
+      );
+      print('Workspace.fromJson output: ${workspace.toJson()}');
+      return workspace;
+    } catch (e, stacktrace) {
+      print('Error in Workspace.fromJson: $e');
+      print(stacktrace);
+      return Workspace(
+        id: 'default',
+        name: 'Default Workspace',
+        pages: {},
+        pageOrder: [],
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+        description: 'Error loading workspace: $e',
+        settings: {},
+      );
+    }
   }
 
   // For legacy support

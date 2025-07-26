@@ -102,73 +102,7 @@ class HomeScreenState extends State<HomeScreen> {
     }
     workspaceData['pages'] = pagesMap;
 
-    // Defensive decoding and sanitization
-    _sanitizeWorkspaceData(workspaceData);
-
     return Workspace.fromMap(workspaceData);
-  }
-
-  void _sanitizeWorkspaceData(Map<String, dynamic> data) {
-    // Pages
-    if (data['pages'] is String) {
-      try {
-        data['pages'] = data['pages'] != '' ? jsonDecode(data['pages']) : {};
-      } catch (e) {
-        debugPrint('Error decoding pages: $e');
-        data['pages'] = {};
-      }
-    }
-    if (data['pages'] == null || data['pages'] is! Map) {
-      data['pages'] = {};
-    }
-
-    // Page Order
-    var rawPageOrder = data['pageOrder'];
-    if (rawPageOrder is String) {
-      try {
-        rawPageOrder = rawPageOrder.isNotEmpty ? jsonDecode(rawPageOrder) : [];
-      } catch (e) {
-        debugPrint('Error decoding pageOrder: $e');
-        rawPageOrder = [];
-      }
-    }
-    if (rawPageOrder == null || rawPageOrder is! List) {
-      rawPageOrder = [];
-    }
-    final sanitizedList = <String>[];
-    for (var e in rawPageOrder) {
-      if (e != null) {
-        final str = e.toString();
-        if (str.isNotEmpty && str != 'null') {
-          sanitizedList.add(str);
-        }
-      }
-    }
-    data['pageOrder'] = sanitizedList;
-
-    // Settings
-    if (data['settings'] is String) {
-      try {
-        data['settings'] = data['settings'] != '' ? jsonDecode(data['settings']) : {};
-      } catch (e) {
-        debugPrint('Error decoding settings: $e');
-        data['settings'] = {};
-      }
-    }
-    if (data['settings'] == null || data['settings'] is! Map) {
-      data['settings'] = {};
-    }
-
-    // Other fields
-    data['id'] = data['id']?.toString() ?? 'default';
-    data['name'] = data['name']?.toString() ?? 'Default Workspace';
-    data['createdAt'] = data['createdAt'] is int
-        ? data['createdAt']
-        : int.tryParse(data['createdAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch;
-    data['updatedAt'] = data['updatedAt'] is int
-        ? data['updatedAt']
-        : int.tryParse(data['updatedAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch;
-    data['description'] = data['description']?.toString() ?? '';
   }
   
   @override

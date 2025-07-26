@@ -364,6 +364,7 @@ class StorageService {
   }
 
   void _sanitizeWorkspaceData(Map<String, dynamic> data) {
+    debugPrint('Sanitizing workspace data: $data');
     data['id'] = data['id']?.toString() ?? 'default';
     data['name'] = data['name']?.toString() ?? 'Default Workspace';
     data['description'] = data['description']?.toString() ?? '';
@@ -372,6 +373,7 @@ class StorageService {
     data['pages'] = _sanitizeJsonField(data['pages'], {});
     data['pageOrder'] = _sanitizeJsonField(data['pageOrder'], []);
     data['settings'] = _sanitizeJsonField(data['settings'], {});
+    debugPrint('Sanitized workspace data: $data');
   }
 
   String _sanitizeJsonField(dynamic value, dynamic defaultValue) {
