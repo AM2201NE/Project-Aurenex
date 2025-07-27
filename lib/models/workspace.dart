@@ -15,15 +15,18 @@ class Workspace {
 
   Workspace({
     required this.id,
-    this.name,
-    this.description,
+    this.name = 'Default Workspace',
+    this.description = '',
     this.createdAt,
     this.updatedAt,
     Map<String, page_model.Page>? pages,
     List<dynamic>? pageOrder,
     this.settings,
   })  : pages = pages ?? {},
-        pageOrder = _sanitizePageOrder(pageOrder);
+        pageOrder = _sanitizePageOrder(pageOrder),
+        createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch,
+        updatedAt = updatedAt ?? DateTime.now().millisecondsSinceEpoch,
+        settings = settings ?? {};
 
   // Defensive: sanitize pageOrder input everywhere
   static List<String> _sanitizePageOrder(dynamic po) {

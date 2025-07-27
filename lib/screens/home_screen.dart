@@ -26,9 +26,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  late Workspace _workspace;
+  Workspace? _workspace;
   List<page_model.Page> _pages = [];
   LlamaCpp? aiModel;
+  bool _isLoading = true;
+  String? _errorMessage;
   
   @override
   void initState() {
@@ -43,19 +45,28 @@ class HomeScreenState extends State<HomeScreen> {
   }
   
   Future<void> _loadWorkspace() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       _pages = await widget.storageService.getAllPages();
       _workspace = await _loadAndParseWorkspace(pages: _pages);
     } on Exception catch (e) {
       debugPrint('A known error occurred while loading workspace: $e');
-      _showErrorDialog('Error Loading Workspace', e.toString());
-      _workspace = _createDefaultWorkspace();
+      setState(() {
+        _errorMessage = e.toString();
+      });
     } catch (e) {
       debugPrint('An unexpected error occurred while loading workspace: $e');
-      _showErrorDialog('Unexpected Error', 'An unexpected error occurred. Please try again.');
-      _workspace = _createDefaultWorkspace();
+      setState(() {
+        _errorMessage = 'An unexpected error occurred. Please try again.';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-    setState(() {});
   }
 
   Workspace _createDefaultWorkspace() {
@@ -108,66 +119,82 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: DashboardScreen(
-              pages: _pages,
-              onOpenPage: (pageId) {
-                final page = _pages.firstWhere((p) => p.id == pageId);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PageEditorScreen(page: page),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadWorkspace,
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                );
-              },
-              onCreatePage: () {
-                final newPage = page_model.Page(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  title: 'Untitled',
-                  content: [RichTextBlock(text: '')],
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                setState(() {
-                  _pages.add(newPage);
-                });
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PageEditorScreen(page: newPage),
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.chat),
-              label: const Text('AI Chat'),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => AIChatScreen(
-                      onSendPrompt: (prompt) async {
-                        if (aiModel != null) {
-                          try {
-                            return await Future(() => aiModel!.generate(prompt));
-                          } catch (e) {
-                            return 'AI error: $e';
-                          }
-                        } else {
-                          return 'AI model not loaded.';
-                        }
-                      },
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: DashboardScreen(
+                        pages: _pages,
+                        onOpenPage: (pageId) {
+                          final page = _pages.firstWhere((p) => p.id == pageId);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PageEditorScreen(page: page),
+                            ),
+                          );
+                        },
+                        onCreatePage: () {
+                          final newPage = page_model.Page(
+                            id: DateTime.now().millisecondsSinceEpoch.toString(),
+                            title: 'Untitled',
+                            content: [RichTextBlock(text: '')],
+                            createdAt: DateTime.now(),
+                            updatedAt: DateTime.now(),
+                          );
+                          setState(() {
+                            _pages.add(newPage);
+                          });
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => PageEditorScreen(page: newPage),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.chat),
+                        label: const Text('AI Chat'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AIChatScreen(
+                                onSendPrompt: (prompt) async {
+                                  if (aiModel != null) {
+                                    try {
+                                      return await Future(() => aiModel!.generate(prompt));
+                                    } catch (e) {
+                                      return 'AI error: $e';
+                                    }
+                                  } else {
+                                    return 'AI model not loaded.';
+                                  }
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 }

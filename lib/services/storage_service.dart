@@ -331,9 +331,9 @@ class StorageService {
 
   Future<Map<String, dynamic>> getWorkspaceDataWithDirectory(String id, {String? directoryOverride}) async {
     debugPrint('getWorkspaceDataWithDirectory: id=$id, directoryOverride=$directoryOverride');
-    final db = directoryOverride == null ? await database : await getDatabaseAt(directoryOverride);
-    debugPrint('Database instance acquired for workspace.');
     try {
+      final db = directoryOverride == null ? await database : await getDatabaseAt(directoryOverride);
+      debugPrint('Database instance acquired for workspace.');
       final workspacesData = await db.query(
         'workspaces',
         where: 'id = ?',
@@ -342,16 +342,7 @@ class StorageService {
       debugPrint('Workspace query result: ${workspacesData.length} rows');
       if (workspacesData.isEmpty) {
         debugPrint('No workspace found, returning default workspace.');
-        return {
-          'id': 'default',
-          'name': 'Default Workspace',
-          'description': '',
-          'createdAt': DateTime.now().millisecondsSinceEpoch,
-          'updatedAt': DateTime.now().millisecondsSinceEpoch,
-          'pages': '',
-          'pageOrder': '',
-          'settings': '{}'
-        };
+        return _getDefaultWorkspaceData();
       }
       debugPrint('Returning workspace data: ${workspacesData.first}');
       final workspace = Map<String, dynamic>.from(workspacesData.first);
@@ -359,8 +350,21 @@ class StorageService {
       return workspace;
     } catch (e) {
       debugPrint('Error loading workspace: $e');
-      rethrow;
+      return _getDefaultWorkspaceData();
     }
+  }
+
+  Map<String, dynamic> _getDefaultWorkspaceData() {
+    return {
+      'id': 'default',
+      'name': 'Default Workspace',
+      'description': '',
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      'pages': '{}',
+      'pageOrder': '[]',
+      'settings': '{}'
+    };
   }
 
   void _sanitizeWorkspaceData(Map<String, dynamic> data) {
