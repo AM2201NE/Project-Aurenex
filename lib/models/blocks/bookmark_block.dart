@@ -33,4 +33,21 @@ class BookmarkBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return BookmarkBlock(
+      url: url,
+      title: title,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['url'] = url;
+    map['title'] = title;
+    return map;
+  }
 }

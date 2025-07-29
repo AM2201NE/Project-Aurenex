@@ -37,4 +37,23 @@ class ImageBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return ImageBlock(
+      source: source,
+      isAsset: isAsset,
+      caption: caption,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['source'] = source;
+    map['is_asset'] = isAsset;
+    map['caption'] = caption;
+    return map;
+  }
 }

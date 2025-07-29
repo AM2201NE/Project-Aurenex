@@ -5,80 +5,87 @@ const int LLAMA_LOG_LEVEL_ERROR = 2;
 const int LLAMA_LOG_LEVEL_WARN = 3;
 const int LLAMA_LOG_LEVEL_INFO = 4;
 
+import 'dart:ffi';
+
+/// Log level constants for llama.cpp
+const int LLAMA_LOG_LEVEL_ERROR = 2;
+const int LLAMA_LOG_LEVEL_WARN = 3;
+const int LLAMA_LOG_LEVEL_INFO = 4;
+
+/// Opaque pointer to llama_model
+class LlamaModel extends Opaque {}
+
+/// Opaque pointer to llama_context
+class LlamaContext extends Opaque {}
+
+/// Opaque pointer to llama_sampling_context
+class LlamaSamplingContext extends Opaque {}
+
+/// Model parameters
+class LlamaModelParams extends Struct {
+  @Int32()
+  external int n_gpu_layers;
+  
+  @Int32()
+  external int main_gpu;
+  
+  @Int32()
+  external int tensor_split;
+  
+  @Int32()
+  external int vocab_only;
+  
+  @Int32()
+  external int use_mmap;
+  
+  @Int32()
+  external int use_mlock;
+}
+
+/// Context parameters
+class LlamaContextParams extends Struct {
+  @Int32()
+  external int seed;
+  
+  @Int32()
+  external int n_ctx;
+  
+  @Int32()
+  external int n_batch;
+
+  @Int32()
+  external int n_threads;
+
+  @Int32()
+  external int n_threads_batch;
+}
+
+/// Sampling parameters
+class LlamaSamplingParams extends Struct {
+  @Float()
+  external double temp;
+
+  @Float()
+  external double top_p;
+
+  @Int32()
+  external int n_prev;
+
+  @Int32()
+  external int n_probs;
+
+  @Int32()
+  external int min_keep;
+
+  @Int32()
+  external int seed;
+}
+
 /// FFI bindings for llama.cpp
 class LlamaBindings {
   final DynamicLibrary _lib;
-  
+
   LlamaBindings(this._lib);
-  
-  /// Opaque pointer to llama_model
-  class LlamaModel extends Opaque {}
-  
-  /// Opaque pointer to llama_context
-  class LlamaContext extends Opaque {}
-  
-  /// Opaque pointer to llama_sampling_context
-  class LlamaSamplingContext extends Opaque {}
-  
-  /// Model parameters
-  class LlamaModelParams extends Struct {
-    @Int32()
-    external int n_gpu_layers;
-    
-    @Int32()
-    external int main_gpu;
-    
-    @Int32()
-    external int tensor_split;
-    
-    @Int32()
-    external int vocab_only;
-    
-    @Int32()
-    external int use_mmap;
-    
-    @Int32()
-    external int use_mlock;
-  }
-  
-  /// Context parameters
-  class LlamaContextParams extends Struct {
-    @Int32()
-    external int seed;
-    
-    @Int32()
-    external int n_ctx;
-    
-    @Int32()
-    external int n_batch;
-    
-    @Int32()
-    external int n_threads;
-    
-    @Int32()
-    external int n_threads_batch;
-  }
-  
-  /// Sampling parameters
-  class LlamaSamplingParams extends Struct {
-    @Float()
-    external double temp;
-    
-    @Float()
-    external double top_p;
-    
-    @Int32()
-    external int n_prev;
-    
-    @Int32()
-    external int n_probs;
-    
-    @Int32()
-    external int min_keep;
-    
-    @Int32()
-    external int seed;
-  }
   
   /// Set log level
   void llama_log_set(int level) {
@@ -91,10 +98,10 @@ class LlamaBindings {
   }
   
   /// Get default model parameters
-  LlamaModelParams llama_model_default_params() {
+  Pointer<LlamaModelParams> llama_model_default_params() {
     final function = _lib.lookupFunction<
-      LlamaModelParams Function(),
-      LlamaModelParams Function()
+      Pointer<LlamaModelParams> Function(),
+      Pointer<LlamaModelParams> Function()
     >('llama_model_default_params');
     
     return function();
@@ -103,11 +110,11 @@ class LlamaBindings {
   /// Load model from file
   Pointer<LlamaModel> llama_load_model_from_file(
     Pointer<Utf8> path,
-    LlamaModelParams params
+    Pointer<LlamaModelParams> params
   ) {
     final function = _lib.lookupFunction<
-      Pointer<LlamaModel> Function(Pointer<Utf8>, LlamaModelParams),
-      Pointer<LlamaModel> Function(Pointer<Utf8>, LlamaModelParams)
+      Pointer<LlamaModel> Function(Pointer<Utf8>, Pointer<LlamaModelParams>),
+      Pointer<LlamaModel> Function(Pointer<Utf8>, Pointer<LlamaModelParams>)
     >('llama_load_model_from_file');
     
     return function(path, params);
@@ -124,10 +131,10 @@ class LlamaBindings {
   }
   
   /// Get default context parameters
-  LlamaContextParams llama_context_default_params() {
+  Pointer<LlamaContextParams> llama_context_default_params() {
     final function = _lib.lookupFunction<
-      LlamaContextParams Function(),
-      LlamaContextParams Function()
+      Pointer<LlamaContextParams> Function(),
+      Pointer<LlamaContextParams> Function()
     >('llama_context_default_params');
     
     return function();
@@ -136,11 +143,11 @@ class LlamaBindings {
   /// Create new context with model
   Pointer<LlamaContext> llama_new_context_with_model(
     Pointer<LlamaModel> model,
-    LlamaContextParams params
+    Pointer<LlamaContextParams> params
   ) {
     final function = _lib.lookupFunction<
-      Pointer<LlamaContext> Function(Pointer<LlamaModel>, LlamaContextParams),
-      Pointer<LlamaContext> Function(Pointer<LlamaModel>, LlamaContextParams)
+      Pointer<LlamaContext> Function(Pointer<LlamaModel>, Pointer<LlamaContextParams>),
+      Pointer<LlamaContext> Function(Pointer<LlamaModel>, Pointer<LlamaContextParams>)
     >('llama_new_context_with_model');
     
     return function(model, params);
@@ -224,20 +231,20 @@ class LlamaBindings {
   }
   
   /// Get default sampling parameters
-  LlamaSamplingParams llama_sampling_params_default() {
+  Pointer<LlamaSamplingParams> llama_sampling_params_default() {
     final function = _lib.lookupFunction<
-      LlamaSamplingParams Function(),
-      LlamaSamplingParams Function()
+      Pointer<LlamaSamplingParams> Function(),
+      Pointer<LlamaSamplingParams> Function()
     >('llama_sampling_params_default');
     
     return function();
   }
   
   /// Initialize sampling
-  Pointer<LlamaSamplingContext> llama_sampling_init(LlamaSamplingParams params) {
+  Pointer<LlamaSamplingContext> llama_sampling_init(Pointer<LlamaSamplingParams> params) {
     final function = _lib.lookupFunction<
-      Pointer<LlamaSamplingContext> Function(LlamaSamplingParams),
-      Pointer<LlamaSamplingContext> Function(LlamaSamplingParams)
+      Pointer<LlamaSamplingContext> Function(Pointer<LlamaSamplingParams>),
+      Pointer<LlamaSamplingContext> Function(Pointer<LlamaSamplingParams>)
     >('llama_sampling_init');
     
     return function(params);

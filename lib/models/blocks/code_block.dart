@@ -33,4 +33,21 @@ class CodeBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return CodeBlock(
+      text: text,
+      language: language,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['text'] = text;
+    map['language'] = language;
+    return map;
+  }
 }

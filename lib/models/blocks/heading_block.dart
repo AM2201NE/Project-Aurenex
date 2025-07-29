@@ -34,4 +34,21 @@ class HeadingBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return HeadingBlock(
+      level: level,
+      richText: richText,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['rich_text'] = richText.map((span) => span.text).toList();
+    map['level'] = level;
+    return map;
+  }
 }

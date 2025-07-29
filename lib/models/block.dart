@@ -47,8 +47,8 @@ class Block {
     return {
       'block_id': id,
       'type': type,
-      'content': _encodeRichText(richText),
-      'metadata': _encodeMetadata(metadata),
+      'content': plainText,
+      'metadata': metadata != null ? jsonEncode(metadata) : null,
       'parent_id': parentId,
     };
   }
@@ -58,87 +58,9 @@ class Block {
     return Block(
       id: map['block_id'] ?? '',
       type: map['type'] ?? 'paragraph',
-      richText: _decodeRichText(map['content']),
+      richText: [TextSpan(text: map['content'] ?? '')],
       parentId: map['parent_id'],
-      metadata: _decodeMetadata(map['metadata']),
+      metadata: map['metadata'] != null ? jsonDecode(map['metadata']) : null,
     );
-  }
-  
-  /// Encode rich text to string
-  static String _encodeRichText(List<TextSpan> richText) {
-    // Simple encoding for now, just extract text
-    final buffer = StringBuffer();
-    for (final span in richText) {
-      buffer.write(span.text);
-    }
-    return buffer.toString();
-  }
-  
-  /// Decode rich text from string
-  static List<TextSpan> _decodeRichText(String? encoded) {
-    if (encoded == null || encoded.isEmpty) {
-      return [];
-    }
-    
-    // Simple decoding for now, just create a single span
-    return [TextSpan(text: encoded)];
-  }
-  
-  /// Encode metadata to string
-  static String _encodeMetadata(Map<String, dynamic>? metadata) {
-    if (metadata == null) {
-      return '{}';
-    }
-    
-    // Simple JSON-like encoding
-    final buffer = StringBuffer('{');
-    var first = true;
-    
-    for (final entry in metadata.entries) {
-      if (!first) {
-        buffer.write(',');
-      }
-      first = false;
-      
-      buffer.write('"${entry.key}":');
-      
-      if (entry.value is String) {
-        buffer.write('"${entry.value}"');
-      } else if (entry.value is bool || entry.value is num) {
-        buffer.write('${entry.value}');
-      } else if (entry.value is List) {
-        buffer.write('[');
-        var firstItem = true;
-        for (final item in entry.value as List) {
-          if (!firstItem) {
-            buffer.write(',');
-          }
-          firstItem = false;
-          
-          if (item is String) {
-            buffer.write('"$item"');
-          } else {
-            buffer.write('$item');
-          }
-        }
-        buffer.write(']');
-      } else {
-        buffer.write('null');
-      }
-    }
-    
-    buffer.write('}');
-    return buffer.toString();
-  }
-  
-  /// Decode metadata from string
-  static Map<String, dynamic>? _decodeMetadata(String? encoded) {
-    if (encoded == null || encoded.isEmpty || encoded == '{}') {
-      return null;
-    }
-    
-    // For now, return an empty map
-    // In a real implementation, this would parse the JSON-like string
-    return {};
   }
 }

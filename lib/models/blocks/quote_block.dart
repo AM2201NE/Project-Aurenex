@@ -29,4 +29,19 @@ class QuoteBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return QuoteBlock(
+      richText: richText,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['rich_text'] = richText.map((span) => span.text).toList();
+    return map;
+  }
 }

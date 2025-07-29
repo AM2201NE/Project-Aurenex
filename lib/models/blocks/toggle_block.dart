@@ -37,4 +37,23 @@ class ToggleBlock extends Block {
       childrenOrder: (map['children_order'] as List?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
+
+  @override
+  Block copy() {
+    return ToggleBlock(
+      richText: richText,
+      parentId: parentId,
+      children: children,
+      childrenOrder: childrenOrder,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['rich_text'] = richText.map((span) => span.text).toList();
+    map['children'] = children;
+    map['children_order'] = childrenOrder;
+    return map;
+  }
 }

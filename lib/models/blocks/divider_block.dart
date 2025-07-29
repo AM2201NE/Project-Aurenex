@@ -23,4 +23,16 @@ class DividerBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return DividerBlock(
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return super.toMap();
+  }
 }

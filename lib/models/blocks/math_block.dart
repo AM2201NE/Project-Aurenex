@@ -33,4 +33,21 @@ class MathBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return MathBlock(
+      equation: equation,
+      isInline: isInline,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['equation'] = equation;
+    map['is_inline'] = isInline;
+    return map;
+  }
 }

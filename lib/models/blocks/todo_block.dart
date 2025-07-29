@@ -34,4 +34,21 @@ class TodoBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return TodoBlock(
+      richText: richText,
+      checked: checked,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['rich_text'] = richText.map((span) => span.text).toList();
+    map['checked'] = checked;
+    return map;
+  }
 }

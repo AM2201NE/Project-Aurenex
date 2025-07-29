@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/page.dart';
-import '../models/blocks/base_block.dart';
-import '../models/blocks/text_blocks.dart';
-import '../storage/repository.dart';
-import '../ai/llm_interface.dart';
-import 'widgets/block_editor.dart';
-import 'widgets/toolbar.dart';
-import 'widgets/ai_assistant_panel.dart';
+import '../../models/page.dart';
+import '../../models/blocks/base_block.dart';
+import '../../models/blocks/text_blocks.dart';
+import '../../storage/repository.dart';
+import '../../ai/llm_interface.dart';
+import '../widgets/block_editor.dart';
+import '../widgets/toolbar.dart';
+import '../widgets/ai_assistant_panel.dart';
 
 /// Editor screen for editing a page
 class EditorScreen extends StatefulWidget {
-  final NotePage page;
+  final Page page;
   
   const EditorScreen({
     Key? key,
@@ -23,7 +23,7 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> {
-  late NotePage _page;
+  late Page _page;
   bool _isAiPanelVisible = false;
   bool _isSaving = false;
   
@@ -81,97 +81,88 @@ class _EditorScreenState extends State<EditorScreen> {
   void _addBlockAfter(Block block, String type) {
     final index = _page.blockOrder.indexOf(block.id);
     if (index == -1) return;
-    
-    Block newBlock;
-    
-    switch (type) {
-      case 'paragraph':
-        newBlock = ParagraphBlock(
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'heading_1':
-        newBlock = HeadingBlock(
-          level: 1,
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'heading_2':
-        newBlock = HeadingBlock(
-          level: 2,
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'heading_3':
-        newBlock = HeadingBlock(
-          level: 3,
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'bulleted_list_item':
-        newBlock = BulletedListItemBlock(
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'numbered_list_item':
-        newBlock = NumberedListItemBlock(
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'to_do':
-        newBlock = TodoBlock(
-          richText: [TextSpan(text: '')],
-          checked: false,
-          parentId: _page.id,
-        );
-        break;
-      case 'code':
-        newBlock = CodeBlock(
-          text: '',
-          language: 'plaintext',
-          parentId: _page.id,
-        );
-        break;
-      case 'quote':
-        newBlock = QuoteBlock(
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-        break;
-      case 'divider':
-        newBlock = DividerBlock(
-          parentId: _page.id,
-        );
-        break;
-      default:
-        newBlock = ParagraphBlock(
-          richText: [TextSpan(text: '')],
-          parentId: _page.id,
-        );
-    }
+
+    final newBlock = _createBlock(type);
     
     setState(() {
-      _page.addBlock(newBlock);
-      _page.moveBlock(newBlock.id, toIndex: index + 1);
+      _page.addBlock(newBlock, index: index + 1);
     });
   }
-  
+
   /// Delete a block
   void _deleteBlock(String blockId) {
     setState(() {
       _page.removeBlock(blockId);
-      
+
       // Add an empty paragraph if the page is empty
       if (_page.blocks.isEmpty) {
         _addEmptyParagraph();
       }
     });
+  }
+
+  Block _createBlock(String type) {
+    switch (type) {
+      case 'paragraph':
+        return ParagraphBlock(
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'heading_1':
+        return HeadingBlock(
+          level: 1,
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'heading_2':
+        return HeadingBlock(
+          level: 2,
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'heading_3':
+        return HeadingBlock(
+          level: 3,
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'bulleted_list_item':
+        return BulletedListItemBlock(
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'numbered_list_item':
+        return NumberedListItemBlock(
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'to_do':
+        return TodoBlock(
+          richText: [TextSpan(text: '')],
+          checked: false,
+          parentId: _page.id,
+        );
+      case 'code':
+        return CodeBlock(
+          text: '',
+          language: 'plaintext',
+          parentId: _page.id,
+        );
+      case 'quote':
+        return QuoteBlock(
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+      case 'divider':
+        return DividerBlock(
+          parentId: _page.id,
+        );
+      default:
+        return ParagraphBlock(
+          richText: [TextSpan(text: '')],
+          parentId: _page.id,
+        );
+    }
   }
   
   /// Update a block

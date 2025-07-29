@@ -33,4 +33,21 @@ class MermaidBlock extends Block {
       parentId: map['parent_id'],
     );
   }
+
+  @override
+  Block copy() {
+    return MermaidBlock(
+      code: code,
+      caption: caption,
+      parentId: parentId,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    final map = super.toMap();
+    map['code'] = code;
+    map['caption'] = caption;
+    return map;
+  }
 }
