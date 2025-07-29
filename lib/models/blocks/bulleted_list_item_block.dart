@@ -22,10 +22,8 @@ class BulletedListItemBlock extends Block {
   
   factory BulletedListItemBlock.fromMap(Map<String, dynamic> map) {
     return BulletedListItemBlock(
-      id: map['id'],
-      richText: (map['rich_text'] as List?)
-          ?.map((text) => TextSpan(text: text.toString()))
-          .toList() ?? [TextSpan(text: '')],
+      id: map['block_id'],
+      richText: [TextSpan(text: map['content'] ?? '')],
       parentId: map['parent_id'],
     );
   }
@@ -33,6 +31,7 @@ class BulletedListItemBlock extends Block {
   @override
   Block copy() {
     return BulletedListItemBlock(
+      id: id,
       richText: richText,
       parentId: parentId,
     );
@@ -40,8 +39,15 @@ class BulletedListItemBlock extends Block {
 
   @override
   Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    return map;
+    return super.toMap();
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return BulletedListItemBlock(
+      id: id ?? this.id,
+      richText: richText ?? this.richText,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

@@ -27,9 +27,9 @@ class CodeBlock extends Block {
   
   factory CodeBlock.fromMap(Map<String, dynamic> map) {
     return CodeBlock(
-      id: map['id'],
-      text: map['text'] ?? '',
-      language: map['language'] ?? 'plaintext',
+      id: map['block_id'],
+      text: map['content'] ?? '',
+      language: map['metadata'] != null ? jsonDecode(map['metadata'])['language'] : 'plaintext',
       parentId: map['parent_id'],
     );
   }
@@ -37,6 +37,7 @@ class CodeBlock extends Block {
   @override
   Block copy() {
     return CodeBlock(
+      id: id,
       text: text,
       language: language,
       parentId: parentId,
@@ -46,8 +47,17 @@ class CodeBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['text'] = text;
-    map['language'] = language;
+    map['metadata'] = jsonEncode({'language': language});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return CodeBlock(
+      id: id ?? this.id,
+      text: (metadata?['text'] ?? this.text) as String,
+      language: (metadata?['language'] ?? this.language) as String,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

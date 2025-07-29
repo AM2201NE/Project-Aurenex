@@ -5,13 +5,6 @@ const int LLAMA_LOG_LEVEL_ERROR = 2;
 const int LLAMA_LOG_LEVEL_WARN = 3;
 const int LLAMA_LOG_LEVEL_INFO = 4;
 
-import 'dart:ffi';
-
-/// Log level constants for llama.cpp
-const int LLAMA_LOG_LEVEL_ERROR = 2;
-const int LLAMA_LOG_LEVEL_WARN = 3;
-const int LLAMA_LOG_LEVEL_INFO = 4;
-
 /// Opaque pointer to llama_model
 class LlamaModel extends Opaque {}
 

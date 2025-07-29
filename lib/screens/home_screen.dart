@@ -176,15 +176,11 @@ class HomeScreenState extends State<HomeScreen> {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => AIChatScreen(
-                                onSendPrompt: (prompt) async {
+                                onSendPrompt: (prompt) {
                                   if (aiModel != null) {
-                                    try {
-                                      return await Future(() => aiModel!.generate(prompt));
-                                    } catch (e) {
-                                      return 'AI error: $e';
-                                    }
+                                    return aiModel!.generate(prompt);
                                   } else {
-                                    return 'AI model not loaded.';
+                                    return Future.value('AI model not loaded.');
                                   }
                                 },
                               ),

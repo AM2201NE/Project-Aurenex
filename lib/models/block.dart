@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 
 /// Block model representing a content block in a page
-class Block {
+abstract class Block {
   final String id;
   final String type;
   final List<TextSpan> richText;
@@ -32,15 +33,7 @@ class Block {
     List<TextSpan>? richText,
     String? parentId,
     Map<String, dynamic>? metadata,
-  }) {
-    return Block(
-      id: id ?? this.id,
-      type: type ?? this.type,
-      richText: richText ?? this.richText,
-      parentId: parentId ?? this.parentId,
-      metadata: metadata ?? this.metadata,
-    );
-  }
+  });
   
   /// Convert to map for database storage
   Map<String, dynamic> toMap() {
@@ -55,12 +48,10 @@ class Block {
   
   /// Create from map (database record)
   factory Block.fromMap(Map<String, dynamic> map) {
-    return Block(
-      id: map['block_id'] ?? '',
-      type: map['type'] ?? 'paragraph',
-      richText: [TextSpan(text: map['content'] ?? '')],
-      parentId: map['parent_id'],
-      metadata: map['metadata'] != null ? jsonDecode(map['metadata']) : null,
-    );
+    // This will be handled by the subclasses
+    throw UnimplementedError();
   }
+
+  Map<String, dynamic> toJson();
+  Block copy();
 }

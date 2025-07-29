@@ -27,9 +27,9 @@ class BookmarkBlock extends Block {
   
   factory BookmarkBlock.fromMap(Map<String, dynamic> map) {
     return BookmarkBlock(
-      id: map['id'],
-      url: map['url'] ?? '',
-      title: map['title'],
+      id: map['block_id'],
+      url: map['content'] ?? '',
+      title: map['metadata'] != null ? jsonDecode(map['metadata'])['title'] : null,
       parentId: map['parent_id'],
     );
   }
@@ -37,6 +37,7 @@ class BookmarkBlock extends Block {
   @override
   Block copy() {
     return BookmarkBlock(
+      id: id,
       url: url,
       title: title,
       parentId: parentId,
@@ -46,8 +47,17 @@ class BookmarkBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['url'] = url;
-    map['title'] = title;
+    map['metadata'] = jsonEncode({'title': title});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return BookmarkBlock(
+      id: id ?? this.id,
+      url: (metadata?['url'] ?? this.url) as String,
+      title: (metadata?['title'] ?? this.title) as String?,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }
