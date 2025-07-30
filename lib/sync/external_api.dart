@@ -98,12 +98,12 @@ class NotionApiService {
   }
   
   /// Create a page in Notion
-  Future<Map<String, dynamic>?> createPage(NotePage page, String parentId) async {
+  Future<Map<String, dynamic>?> createPage(Page page, String parentId) async {
     try {
       final apiKey = _apiKeyManager.activeKeyForService('notion');
       final response = await http.post(
         Uri.parse('$_baseUrl/pages'),
-        headers: _getHeaders(apiKey),
+        headers: _getHeaders(apiKey!),
         body: jsonEncode({
           'parent': {'database_id': parentId},
           'properties': {
@@ -190,7 +190,10 @@ class NotionApiService {
   }
   
   /// Get headers for Notion API requests
-  Map<String, String> _getHeaders(ApiKey apiKey) {
+  Map<String, String> _getHeaders(ApiKey? apiKey) {
+    if (apiKey == null) {
+      throw Exception('API key is null');
+    }
     return {
       'Authorization': 'Bearer ${apiKey.key}',
       'Content-Type': 'application/json',
@@ -258,7 +261,7 @@ class SyncService extends ChangeNotifier {
   }
   
   /// Sync a page with Notion
-  Future<void> _syncPage(NotePage page, String parentId) async {
+  Future<void> _syncPage(Page page, String parentId) async {
     // Check if page exists in Notion
     // In a real app, we would store Notion IDs for pages
     // For now, we'll create a new page every time
@@ -275,7 +278,7 @@ class SyncService extends ChangeNotifier {
   }
   
   /// Convert blocks to Notion format
-  List<Map<String, dynamic>> _convertBlocksToNotion(NotePage page) {
+  List<Map<String, dynamic>> _convertBlocksToNotion(Page page) {
     final result = <Map<String, dynamic>>[];
     
     for (final blockId in page.blockOrder) {

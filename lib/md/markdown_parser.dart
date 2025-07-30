@@ -42,7 +42,7 @@ class MarkdownParser {
     }
     
     // Add blocks
-    for (final block in page.blocks) {
+    for (final block in page.blocks.values) {
       buffer.writeln(_blockToMarkdown(block));
     }
     
@@ -211,10 +211,10 @@ class MarkdownParser {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: pageTitle,
       tags: tags,
-      created: DateTime.now().millisecondsSinceEpoch,
-      updated: DateTime.now().millisecondsSinceEpoch,
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+      updatedAt: DateTime.now().millisecondsSinceEpoch,
       filePath: '',
-      blocks: [],
+      blocks: {},
     );
     
     // Parse blocks
@@ -231,35 +231,35 @@ class MarkdownParser {
       if (line.startsWith('# ')) {
         // Heading 1
         final text = line.substring(2).trim();
-        final block = Block(
+        final block = HeadingBlock(
           id: '${page.id}_block_$position',
-          type: 'heading1',
+          level: 1,
           richText: [TextSpan(text: text)],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('## ')) {
         // Heading 2
         final text = line.substring(3).trim();
-        final block = Block(
+        final block = HeadingBlock(
           id: '${page.id}_block_$position',
-          type: 'heading2',
+          level: 2,
           richText: [TextSpan(text: text)],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('### ')) {
         // Heading 3
         final text = line.substring(4).trim();
-        final block = Block(
+        final block = HeadingBlock(
           id: '${page.id}_block_$position',
-          type: 'heading3',
+          level: 3,
           richText: [TextSpan(text: text)],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('- ')) {
         // Bulleted list item or todo
@@ -267,35 +267,32 @@ class MarkdownParser {
         if (text.startsWith('[x] ') || text.startsWith('[ ] ')) {
           final checked = text.startsWith('[x] ');
           final todoText = text.substring(4).trim();
-          final block = Block(
+          final block = TodoBlock(
             id: '${page.id}_block_$position',
-            type: 'toDo',
             richText: [TextSpan(text: todoText)],
+            checked: checked,
             parentId: page.id,
-            metadata: {'checked': checked},
           );
-          page.blocks.add(block);
+          page.blocks[block.id] = block;
           position++;
         } else {
-          final block = Block(
+          final block = BulletedListItemBlock(
             id: '${page.id}_block_$position',
-            type: 'bulletedListItem',
             richText: [TextSpan(text: text)],
             parentId: page.id,
           );
-          page.blocks.add(block);
+          page.blocks[block.id] = block;
           position++;
         }
       } else if (line.startsWith('1. ') || RegExp(r'^\d+\. ').hasMatch(line)) {
         // Numbered list item
         final text = line.substring(line.indexOf('. ') + 2).trim();
-        final block = Block(
+        final block = NumberedListItemBlock(
           id: '${page.id}_block_$position',
-          type: 'numberedListItem',
           richText: [TextSpan(text: text)],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('> ')) {
         // Quote
@@ -309,13 +306,12 @@ class MarkdownParser {
         }
         i--; // Adjust for the outer loop increment
         
-        final block = Block(
+        final block = QuoteBlock(
           id: '${page.id}_block_$position',
-          type: 'quote',
           richText: [TextSpan(text: buffer.toString().trim())],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('```')) {
         // Code block
@@ -328,27 +324,21 @@ class MarkdownParser {
           i++;
         }
         
-        final block = Block(
+        final block = CodeBlock(
           id: '${page.id}_block_$position',
-          type: 'code',
-          richText: [TextSpan(text: buffer.toString().trim())],
+          text: buffer.toString().trim(),
+          language: language,
           parentId: page.id,
-          metadata: {
-            'language': language,
-            'text': buffer.toString().trim(),
-          },
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line == '---') {
         // Divider
-        final block = Block(
+        final block = DividerBlock(
           id: '${page.id}_block_$position',
-          type: 'divider',
-          richText: [],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       } else if (line.startsWith('![')) {
         // Image
@@ -359,18 +349,14 @@ class MarkdownParser {
           final caption = match.group(1)!.trim();
           final source = match.group(2)!.trim();
           
-          final block = Block(
+          final block = ImageBlock(
             id: '${page.id}_block_$position',
-            type: 'image',
-            richText: [],
+            source: source,
+            isAsset: false,
+            caption: caption.isEmpty ? null : caption,
             parentId: page.id,
-            metadata: {
-              'source': source,
-              'isAsset': false,
-              'caption': caption.isEmpty ? null : caption,
-            },
           );
-          page.blocks.add(block);
+          page.blocks[block.id] = block;
           position++;
         }
       } else if (line.startsWith('[') && line.contains('](')) {
@@ -382,17 +368,13 @@ class MarkdownParser {
           final title = match.group(1)!.trim();
           final url = match.group(2)!.trim();
           
-          final block = Block(
+          final block = BookmarkBlock(
             id: '${page.id}_block_$position',
-            type: 'bookmark',
-            richText: [],
+            url: url,
+            title: title,
             parentId: page.id,
-            metadata: {
-              'url': url,
-              'title': title,
-            },
           );
-          page.blocks.add(block);
+          page.blocks[block.id] = block;
           position++;
         }
       } else {
@@ -406,13 +388,12 @@ class MarkdownParser {
         }
         i--; // Adjust for the outer loop increment
         
-        final block = Block(
+        final block = ParagraphBlock(
           id: '${page.id}_block_$position',
-          type: 'paragraph',
           richText: [TextSpan(text: buffer.toString().trim())],
           parentId: page.id,
         );
-        page.blocks.add(block);
+        page.blocks[block.id] = block;
         position++;
       }
       

@@ -26,11 +26,9 @@ class HeadingBlock extends Block {
   
   factory HeadingBlock.fromMap(Map<String, dynamic> map) {
     return HeadingBlock(
-      id: map['id'],
-      richText: (map['rich_text'] as List?)
-          ?.map((text) => TextSpan(text: text.toString()))
-          .toList() ?? [TextSpan(text: '')],
-      level: map['level'] ?? 1,
+      id: map['block_id'],
+      richText: [TextSpan(text: map['content'] ?? '')],
+      level: map['metadata'] != null ? jsonDecode(map['metadata'])['level'] : 1,
       parentId: map['parent_id'],
     );
   }
@@ -38,6 +36,7 @@ class HeadingBlock extends Block {
   @override
   Block copy() {
     return HeadingBlock(
+      id: id,
       level: level,
       richText: richText,
       parentId: parentId,
@@ -47,8 +46,17 @@ class HeadingBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    map['level'] = level;
+    map['metadata'] = jsonEncode({'level': level});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return HeadingBlock(
+      id: id ?? this.id,
+      level: (metadata?['level'] ?? this.level) as int,
+      richText: richText ?? this.richText,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

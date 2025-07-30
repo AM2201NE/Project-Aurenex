@@ -5,7 +5,7 @@ import '../../models/workspace.dart';
 class Sidebar extends StatelessWidget {
   final List<Workspace> workspaces;
   final String? selectedWorkspaceId;
-  final void Function(String) onWorkspaceSelected;
+  final Function(String) onWorkspaceSelected;
   final VoidCallback onCreateWorkspace;
   
   const Sidebar({
@@ -59,7 +59,7 @@ class Sidebar extends StatelessWidget {
                 return ListTile(
                   title: Text(workspace.name),
                   subtitle: Text(
-                    '${workspace.pages?.length ?? 0} pages',
+                    '${workspace.pages.length} pages',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   selected: isSelected,

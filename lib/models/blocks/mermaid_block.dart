@@ -27,9 +27,9 @@ class MermaidBlock extends Block {
   
   factory MermaidBlock.fromMap(Map<String, dynamic> map) {
     return MermaidBlock(
-      id: map['id'],
-      code: map['code'] ?? '',
-      caption: map['caption'],
+      id: map['block_id'],
+      code: map['content'] ?? '',
+      caption: map['metadata'] != null ? jsonDecode(map['metadata'])['caption'] : null,
       parentId: map['parent_id'],
     );
   }
@@ -37,6 +37,7 @@ class MermaidBlock extends Block {
   @override
   Block copy() {
     return MermaidBlock(
+      id: id,
       code: code,
       caption: caption,
       parentId: parentId,
@@ -46,8 +47,17 @@ class MermaidBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['code'] = code;
-    map['caption'] = caption;
+    map['metadata'] = jsonEncode({'caption': caption});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return MermaidBlock(
+      id: id ?? this.id,
+      code: (metadata?['code'] ?? this.code) as String,
+      caption: (metadata?['caption'] ?? this.caption) as String?,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

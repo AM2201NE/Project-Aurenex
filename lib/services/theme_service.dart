@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../config.dart';
 
 class ThemeService {
   // Theme mode notifier
@@ -15,7 +13,8 @@ class ThemeService {
   // Initialize theme service
   Future<void> initialize() async {
     // Load saved theme mode
-    await _loadThemeMode();
+    // For now, use system default
+    themeModeNotifier.value = ThemeMode.system;
     
     // Initialize themes
     _initializeThemes();
@@ -23,68 +22,30 @@ class ThemeService {
   
   // Initialize themes
   void _initializeThemes() {
-    lightTheme = _createTheme(
-      brightness: Brightness.light,
-      primaryColor: AppConfig.lightPrimaryColor,
-      secondaryColor: AppConfig.lightSecondaryColor,
-      backgroundColor: AppConfig.lightBackgroundColor,
-      surfaceColor: AppConfig.lightSurfaceColor,
-      errorColor: AppConfig.lightErrorColor,
-      onPrimaryColor: Colors.white,
-      onSecondaryColor: Colors.white,
-      onBackgroundColor: Colors.black,
-      onSurfaceColor: Colors.black,
-      onErrorColor: Colors.white,
-    );
+    // Light theme
+    lightTheme = _createLightTheme();
 
-    darkTheme = _createTheme(
-      brightness: Brightness.dark,
-      primaryColor: AppConfig.darkPrimaryColor,
-      secondaryColor: AppConfig.darkSecondaryColor,
-      backgroundColor: AppConfig.darkBackgroundColor,
-      surfaceColor: AppConfig.darkSurfaceColor,
-      errorColor: AppConfig.darkErrorColor,
-      onPrimaryColor: Colors.white,
-      onSecondaryColor: Colors.white,
-      onBackgroundColor: Colors.white,
-      onSurfaceColor: Colors.white,
-      onErrorColor: Colors.black,
-    );
+    // Dark theme
+    darkTheme = _createDarkTheme();
   }
 
-  ThemeData _createTheme({
-    required Brightness brightness,
-    required Color primaryColor,
-    required Color secondaryColor,
-    required Color backgroundColor,
-    required Color surfaceColor,
-    required Color errorColor,
-    required Color onPrimaryColor,
-    required Color onSecondaryColor,
-    required Color onBackgroundColor,
-    required Color onSurfaceColor,
-    required Color onErrorColor,
-  }) {
-    final colorScheme = ColorScheme(
-      brightness: brightness,
-      primary: primaryColor,
-      secondary: secondaryColor,
-      background: backgroundColor,
-      surface: surfaceColor,
-      error: errorColor,
-      onPrimary: onPrimaryColor,
-      onSecondary: onSecondaryColor,
-      onBackground: onBackgroundColor,
-      onSurface: onSurfaceColor,
-      onError: onErrorColor,
-    );
+  // Create light theme
+  ThemeData _createLightTheme() {
+    const primaryColor = Color(0xFF2E7EF7);
+    const secondaryColor = Color(0xFF6C63FF);
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      appBarTheme: AppBarTheme(
-        backgroundColor: surfaceColor,
-        foregroundColor: onSurfaceColor,
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        surface: Colors.white,
+        background: const Color(0xFFF5F5F5),
+        error: Colors.red.shade700,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -97,7 +58,11 @@ class ThemeService {
               return primaryColor;
             },
           ),
-          foregroundColor: MaterialStateProperty.all<Color>(onPrimaryColor),
+          foregroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              return Colors.white;
+            },
+          ),
           shape: MaterialStateProperty.all<RoundedRectangleBorder>(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -119,11 +84,79 @@ class ThemeService {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: primaryColor, width: 2),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: errorColor, width: 2),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  // Create dark theme
+  ThemeData _createDarkTheme() {
+    const primaryColor = Color(0xFF4B8EF9);
+    const secondaryColor = Color(0xFF8C7BFF);
+    const darkBackground = Color(0xFF121212);
+    const darkSurface = Color(0xFF1E1E1E);
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.dark(
+        primary: primaryColor,
+        secondary: secondaryColor,
+        surface: darkSurface,
+        background: darkBackground,
+        error: Colors.red.shade300,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              if (states.contains(MaterialState.disabled)) {
+                return primaryColor.withOpacity(0.5);
+              }
+              return primaryColor;
+            },
+          ),
+          foregroundColor: MaterialStateProperty.resolveWith<Color>(
+            (Set<MaterialState> states) {
+              return Colors.white;
+            },
+          ),
+          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        displaySmall: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        headlineLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.red.shade300, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
@@ -133,33 +166,6 @@ class ThemeService {
   // Set theme mode
   void setThemeMode(ThemeMode mode) {
     themeModeNotifier.value = mode;
-    _saveThemeMode(mode);
-  }
-
-  // Load theme mode from shared preferences
-  Future<void> _loadThemeMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeModeString = prefs.getString('themeMode');
-    if (themeModeString == 'light') {
-      themeModeNotifier.value = ThemeMode.light;
-    } else if (themeModeString == 'dark') {
-      themeModeNotifier.value = ThemeMode.dark;
-    } else {
-      themeModeNotifier.value = ThemeMode.system;
-    }
-  }
-
-  // Save theme mode to shared preferences
-  Future<void> _saveThemeMode(ThemeMode mode) async {
-    final prefs = await SharedPreferences.getInstance();
-    String themeModeString;
-    if (mode == ThemeMode.light) {
-      themeModeString = 'light';
-    } else if (mode == ThemeMode.dark) {
-      themeModeString = 'dark';
-    } else {
-      themeModeString = 'system';
-    }
-    await prefs.setString('themeMode', themeModeString);
+    // TODO: Save theme mode preference
   }
 }

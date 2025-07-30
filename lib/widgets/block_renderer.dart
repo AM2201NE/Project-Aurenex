@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class BlockRenderer extends StatelessWidget {
   final dynamic block;
-  final Function(dynamic)? onEdit;
-  final Function(dynamic)? onDelete;
+  final void Function(dynamic)? onEdit;
+  final void Function(dynamic)? onDelete;
   
   const BlockRenderer({
     super.key,
@@ -122,7 +122,7 @@ class BlockRenderer extends StatelessWidget {
             onChanged: (value) {
               if (onEdit != null) {
                 final updatedBlock = block.copyWith(
-                  metadata: {...block.metadata ?? {}, 'checked': value},
+                  metadata: {...(block.metadata ?? {}), 'checked': value},
                 );
                 onEdit!(updatedBlock);
               }

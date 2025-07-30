@@ -27,9 +27,9 @@ class MathBlock extends Block {
   
   factory MathBlock.fromMap(Map<String, dynamic> map) {
     return MathBlock(
-      id: map['id'],
-      equation: map['equation'] ?? '',
-      isInline: map['is_inline'] == true,
+      id: map['block_id'],
+      equation: map['content'] ?? '',
+      isInline: map['metadata'] != null ? jsonDecode(map['metadata'])['isInline'] : false,
       parentId: map['parent_id'],
     );
   }
@@ -37,6 +37,7 @@ class MathBlock extends Block {
   @override
   Block copy() {
     return MathBlock(
+      id: id,
       equation: equation,
       isInline: isInline,
       parentId: parentId,
@@ -46,8 +47,17 @@ class MathBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['equation'] = equation;
-    map['is_inline'] = isInline;
+    map['metadata'] = jsonEncode({'isInline': isInline});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return MathBlock(
+      id: id ?? this.id,
+      equation: (metadata?['equation'] ?? this.equation) as String,
+      isInline: (metadata?['isInline'] ?? this.isInline) as bool,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

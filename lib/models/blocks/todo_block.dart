@@ -26,11 +26,9 @@ class TodoBlock extends Block {
   
   factory TodoBlock.fromMap(Map<String, dynamic> map) {
     return TodoBlock(
-      id: map['id'],
-      richText: (map['rich_text'] as List?)
-          ?.map((text) => TextSpan(text: text.toString()))
-          .toList() ?? [TextSpan(text: '')],
-      checked: map['checked'] == true,
+      id: map['block_id'],
+      richText: [TextSpan(text: map['content'] ?? '')],
+      checked: map['metadata'] != null ? jsonDecode(map['metadata'])['checked'] : false,
       parentId: map['parent_id'],
     );
   }
@@ -38,6 +36,7 @@ class TodoBlock extends Block {
   @override
   Block copy() {
     return TodoBlock(
+      id: id,
       richText: richText,
       checked: checked,
       parentId: parentId,
@@ -47,8 +46,17 @@ class TodoBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    map['checked'] = checked;
+    map['metadata'] = jsonEncode({'checked': checked});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return TodoBlock(
+      id: id ?? this.id,
+      richText: richText ?? this.richText,
+      checked: (metadata?['checked'] ?? this.checked) as bool,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

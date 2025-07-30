@@ -74,10 +74,6 @@ class LlamaCpp {
       repeatPenalty,
       seed,
     );
-    if (resultPtr == ffi.nullptr) {
-      calloc.free(promptPtr);
-      return 'Error: AI model returned a null response.';
-    }
     final result = resultPtr.toDartString();
     calloc.free(promptPtr);
     // Do not free resultPtr if it's static or managed by C

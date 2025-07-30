@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../models/page.dart';
+import '../../models/blocks/base_block.dart';
 import '../../ai/llm_interface.dart';
 
 /// AI assistant panel widget
 class AiAssistantPanel extends StatefulWidget {
-  final NotePage page;
+  final Page page;
   final VoidCallback onClose;
-  final Function(Block) onInsertBlock;
+  final void Function(Block) onInsertBlock;
   
   const AiAssistantPanel({
     Key? key,
@@ -21,7 +22,7 @@ class AiAssistantPanel extends StatefulWidget {
 
 class _AiAssistantPanelState extends State<AiAssistantPanel> {
   final TextEditingController _promptController = TextEditingController();
-  final LLMInterface _llmInterface = LLMInterface();
+  late LLMInterface _llmInterface;
   String _response = '';
   bool _isGenerating = false;
   bool _isInitialized = false;
@@ -29,6 +30,7 @@ class _AiAssistantPanelState extends State<AiAssistantPanel> {
   @override
   void initState() {
     super.initState();
+    _llmInterface = LLMInterface();
     _initializeAi();
   }
   

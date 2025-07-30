@@ -156,8 +156,5 @@ const char* llama_generate_advanced(
     }
     last_output = std::string(output_text.data(), n_chars);
     OutputDebugStringA("[llama_generate_advanced] Generation complete.\n");
-    if (last_output.empty()) {
-        return "";
-    }
     return last_output.c_str();
 }

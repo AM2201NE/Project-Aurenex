@@ -8,7 +8,7 @@ class PageList extends StatelessWidget {
   final Workspace workspace;
   final String? selectedPageId;
   final VoidCallback onCreatePage;
-  final void Function(String pageId) onPageSelected;
+  final void Function(String) onPageSelected;
 
   const PageList({
     Key? key,
@@ -96,7 +96,7 @@ class PageList extends StatelessWidget {
                 ),
                 selected: isSelected,
                 selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
-                onTap: () => onPageSelected(pageId),
+                onTap: () => onPageSelected(page.id),
               );
             },
           ),

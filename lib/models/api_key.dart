@@ -84,10 +84,13 @@ class ApiKeyManager extends ChangeNotifier {
   
   /// Get the active API key for a service
   ApiKey? activeKeyForService(String service) {
-    return _keys.firstWhere(
-      (key) => key.service == service && key.isValid,
-      orElse: () => throw Exception('No active API key found for $service'),
-    );
+    try {
+      return _keys.firstWhere(
+        (key) => key.service == service && key.isValid,
+      );
+    } catch (e) {
+      return null;
+    }
   }
   
   /// Add a new API key

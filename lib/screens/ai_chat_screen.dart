@@ -21,18 +21,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
       _isLoading = true;
       _controller.clear();
     });
-    try {
-      final response = await widget.onSendPrompt(prompt);
-      setState(() {
-        _messages.add(_ChatMessage(response, false));
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _messages.add(_ChatMessage('Error: $e', false));
-        _isLoading = false;
-      });
-    }
+    final response = await widget.onSendPrompt(prompt);
+    setState(() {
+      _messages.add(_ChatMessage(response, false));
+      _isLoading = false;
+    });
   }
 
   @override

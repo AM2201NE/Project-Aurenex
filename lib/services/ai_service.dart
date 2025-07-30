@@ -7,7 +7,6 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../ffi/llama_bindings.dart';
 import '../ai/llm_interface.dart';
-import '../config.dart';
 
 class AIService implements LLMInterface {
   static final AIService _instance = AIService._internal();
@@ -52,11 +51,8 @@ class AIService implements LLMInterface {
       _isInitialized = _model != null && _context != null;
       debugPrint('AI service initialized successfully: $_isInitialized');
       return _isInitialized;
-    } on DllNotFoundException catch (e) {
-      debugPrint('Failed to load native library: $e');
-      return false;
     } catch (e) {
-      debugPrint('An unexpected error occurred during AI service initialization: $e');
+      debugPrint('Failed to initialize AI service: $e');
       return false;
     }
   }
@@ -65,25 +61,21 @@ class AIService implements LLMInterface {
   Future<String?> _getLibraryPath() async {
     if (kIsWeb) return null;
 
-    const libNameMap = {
-      'windows': 'llama.dll',
-      'linux': 'libllama.so',
-      'macos': 'libllama.dylib',
-      'android': 'libllama.so',
-      'ios': 'libllama.dylib',
-    };
-
-    final platform = Platform.operatingSystem;
-    if (!libNameMap.containsKey(platform)) {
-      return null;
+    if (Platform.isWindows) {
+      return 'llama.dll';
+    } else if (Platform.isLinux) {
+      final appDir = await getApplicationSupportDirectory();
+      return path.join(appDir.path, 'native', 'linux', 'libllama.so');
+    } else if (Platform.isMacOS) {
+      final appDir = await getApplicationSupportDirectory();
+      return path.join(appDir.path, 'native', 'macos', 'libllama.dylib');
+    } else if (Platform.isAndroid) {
+      return 'libllama.so';
+    } else if (Platform.isIOS) {
+      return 'libllama.dylib';
     }
 
-    if (platform == 'windows' || platform == 'android') {
-      return libNameMap[platform];
-    }
-
-    final appDir = await getApplicationSupportDirectory();
-    return path.join(appDir.path, 'native', platform, libNameMap[platform]!);
+    return null;
   }
   
   // Load model
@@ -99,7 +91,7 @@ class AIService implements LLMInterface {
       }
       
       // Create model params
-      final params = _bindings.llama_model_default_params();
+      final params = _bindings.llama_model_default_params().ref;
       
       // Load model
       final modelPathUtf8 = modelPath.toNativeUtf8();
@@ -112,7 +104,7 @@ class AIService implements LLMInterface {
       }
       
       // Create context params
-      final contextParams = _bindings.llama_context_default_params();
+      final contextParams = _bindings.llama_context_default_params().ref;
       contextParams.n_ctx = 4096; // Context length
       
       // Create context
@@ -126,10 +118,8 @@ class AIService implements LLMInterface {
       }
       
       debugPrint('Model loaded successfully');
-    } on FileSystemException catch (e) {
-      debugPrint('Failed to load model due to a file system error: $e');
     } catch (e) {
-      debugPrint('An unexpected error occurred while loading the model: $e');
+      debugPrint('Failed to load model: $e');
     }
   }
   
@@ -145,7 +135,7 @@ class AIService implements LLMInterface {
         await modelDir.create(recursive: true);
       }
       
-      final modelPath = path.join(modelDir.path, AppConfig.modelName);
+      final modelPath = path.join(modelDir.path, 'Qwen2-VL-2B-Instruct-Q4_K_M.gguf');
       final modelFile = File(modelPath);
       
       if (await modelFile.exists()) {
@@ -169,13 +159,6 @@ class AIService implements LLMInterface {
     }
   }
   
-  Future<bool> _ensureInitialized() async {
-    if (!_isInitialized || _context == nullptr) {
-      await initialize();
-    }
-    return _isInitialized && _context != nullptr;
-  }
-
   // Generate text
   @override
   Future<String> generateText(String prompt, {
@@ -185,8 +168,11 @@ class AIService implements LLMInterface {
     int seed = 42,
     void Function(String)? onToken,
   }) async {
-    if (!await _ensureInitialized()) {
-      return 'AI service is not initialized properly';
+    if (!_isInitialized || _context == nullptr) {
+      await initialize();
+      if (!_isInitialized || _context == nullptr) {
+        return 'AI service is not initialized properly';
+      }
     }
     
     try {
@@ -217,7 +203,7 @@ class AIService implements LLMInterface {
       
       // Generate response
       final result = StringBuffer();
-      final samplingParams = _bindings.llama_sampling_params_default();
+      final samplingParams = _bindings.llama_sampling_params_default().ref;
       samplingParams.temp = temperature;
       samplingParams.top_p = topP;
       samplingParams.n_prev = nTokens;
@@ -274,8 +260,11 @@ class AIService implements LLMInterface {
     int seed = 42,
     void Function(String)? onToken,
   }) async {
-    if (!await _ensureInitialized()) {
-      return 'AI service is not initialized properly';
+    if (!_isInitialized || _context == nullptr) {
+      await initialize();
+      if (!_isInitialized || _context == nullptr) {
+        return 'AI service is not initialized properly';
+      }
     }
     
     try {

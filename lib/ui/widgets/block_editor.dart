@@ -8,9 +8,9 @@ import '../../models/blocks/advanced_blocks.dart';
 /// Block editor widget for editing different block types
 class BlockEditor extends StatefulWidget {
   final Block block;
-  final Function(String) onAddBlockAfter;
+  final void Function(String) onAddBlockAfter;
   final VoidCallback onDeleteBlock;
-  final Function(Block) onUpdateBlock;
+  final void Function(Block) onUpdateBlock;
   
   const BlockEditor({
     Key? key,
@@ -67,7 +67,7 @@ class _BlockEditorState extends State<BlockEditor> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, size: 16),
-                        onPressed: widget.onDeleteBlock,
+                        onPressed: () => widget.onDeleteBlock(),
                         tooltip: 'Delete block',
                       ),
                     ],

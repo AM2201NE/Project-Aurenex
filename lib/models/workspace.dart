@@ -15,18 +15,15 @@ class Workspace {
 
   Workspace({
     required this.id,
-    this.name = 'Default Workspace',
-    this.description = '',
+    this.name,
+    this.description,
     this.createdAt,
     this.updatedAt,
     Map<String, page_model.Page>? pages,
     List<dynamic>? pageOrder,
     this.settings,
   })  : pages = pages ?? {},
-        pageOrder = _sanitizePageOrder(pageOrder),
-        createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch,
-        updatedAt = updatedAt ?? DateTime.now().millisecondsSinceEpoch,
-        settings = settings ?? {};
+        pageOrder = _sanitizePageOrder(pageOrder);
 
   // Defensive: sanitize pageOrder input everywhere
   static List<String> _sanitizePageOrder(dynamic po) {
@@ -159,78 +156,96 @@ class Workspace {
   }
 
   static Workspace fromJson(Map<String, dynamic> json, {page_model.Page Function(Map<String, dynamic>)? pageFromJson}) {
-    try {
-      print('Workspace.fromJson input: $json');
-      final pageMap = <String, page_model.Page>{};
-      if (json['pages'] is String && json['pages'].isNotEmpty) {
-        try {
-          final decodedPages = jsonDecode(json['pages']) as Map<String, dynamic>;
-          decodedPages.forEach((key, value) {
-            if (pageFromJson != null) {
-              pageMap[key] = pageFromJson(value as Map<String, dynamic>);
-            } else {
-              pageMap[key] = page_model.Page.fromJson(value as Map<String, dynamic>);
-            }
-          });
-        } catch (e) {
-          print('Error decoding pages in Workspace.fromJson: $e');
-        }
-      } else if (json['pages'] is Map) {
-        (json['pages'] as Map).forEach((key, value) {
+    // Debug: print all incoming fields and types
+    json.forEach((k, v) {
+      print('Workspace.fromJson: $k: ${v.runtimeType} = $v');
+    });
+    // Defensive decode for pages, pageOrder, settings
+    dynamic rawPages = json['pages'];
+    if (rawPages is String) {
+      try {
+        rawPages = rawPages.isNotEmpty ? jsonDecode(rawPages) : {};
+      } catch (_) {
+        rawPages = {};
+      }
+    }
+    final pageMap = <String, page_model.Page>{};
+    if (rawPages is Map) {
+      rawPages.forEach((k, v) {
+        final keyStr = k?.toString() ?? '';
+        if (keyStr.isEmpty) return;
+        if (v != null && v is Map<String, dynamic>) {
           if (pageFromJson != null) {
-            pageMap[key as String] = pageFromJson(value as Map<String, dynamic>);
+            pageMap[keyStr] = pageFromJson(Map<String, dynamic>.from(v));
           } else {
-            pageMap[key as String] = page_model.Page.fromJson(value as Map<String, dynamic>);
+            // If no pageFromJson, skip or add a stub Page if needed
           }
-        });
-      }
-
-      List<String> pageOrder = [];
-      if (json['pageOrder'] is String && json['pageOrder'].isNotEmpty) {
-        try {
-          final decodedPageOrder = jsonDecode(json['pageOrder']) as List<dynamic>;
-          pageOrder = decodedPageOrder.map((e) => e.toString()).toList();
-        } catch (e) {
-          print('Error decoding pageOrder in Workspace.fromJson: $e');
         }
-      } else if (json['pageOrder'] is List) {
-        pageOrder = (json['pageOrder'] as List).map((e) => e.toString()).toList();
-      }
+      });
+    }
 
+    dynamic rawSettings = json['settings'];
+    if (rawSettings is String) {
+      try {
+        rawSettings = rawSettings.isNotEmpty ? jsonDecode(rawSettings) : {};
+      } catch (err) {
+        print('Workspace.fromJson: Failed to decode settings string: $err');
+        rawSettings = {};
+      }
+    }
+
+    // Always reconstruct pageOrder from valid page IDs in pages
+    List<String> reconstructedPageOrder = pageMap.keys.where((k) => k.toString().isNotEmpty && k.toString() != 'null').map((k) => k.toString()).toList();
+    int parseInt(dynamic value, [int fallback = 0]) {
+      try {
+        if (value == null) return fallback;
+        if (value is int) return value;
+        if (value is double) return value.toInt();
+        if (value is String) {
+          final parsed = int.tryParse(value);
+          return parsed ?? fallback;
+        }
+        return fallback;
+      } catch (err) {
+        print('Workspace.fromJson: ERROR casting int field: $err, value=$value, type=${value.runtimeType}');
+        return fallback;
+      }
+    }
+    try {
+      // Use reconstructedPageOrder for Workspace construction
+      String id = '';
+      String name = 'Default Workspace';
+      String description = '';
+      int createdAt = DateTime.now().millisecondsSinceEpoch;
+      int updatedAt = DateTime.now().millisecondsSinceEpoch;
+      try { id = (json['id'] != null) ? json['id'].toString() : ''; } catch (err) { print('Workspace.fromJson: ERROR casting id: $err, value=${json['id']}, type=${json['id']?.runtimeType}'); }
+      try { name = (json['name'] != null) ? json['name'].toString() : 'Default Workspace'; } catch (err) { print('Workspace.fromJson: ERROR casting name: $err, value=${json['name']}, type=${json['name']?.runtimeType}'); }
+      try { description = (json['description'] != null) ? json['description'].toString() : ''; } catch (err) { print('Workspace.fromJson: ERROR casting description: $err, value=${json['description']}, type=${json['description']?.runtimeType}'); }
+      try { createdAt = parseInt(json['createdAt'], DateTime.now().millisecondsSinceEpoch); } catch (err) { print('Workspace.fromJson: ERROR casting createdAt: $err, value=${json['createdAt']}, type=${json['createdAt']?.runtimeType}'); }
+      try { updatedAt = parseInt(json['updatedAt'], DateTime.now().millisecondsSinceEpoch); } catch (err) { print('Workspace.fromJson: ERROR casting updatedAt: $err, value=${json['updatedAt']}, type=${json['updatedAt']?.runtimeType}'); }
       Map<String, dynamic> settings = {};
-      if (json['settings'] is String && json['settings'].isNotEmpty) {
-        try {
-          settings = jsonDecode(json['settings']) as Map<String, dynamic>;
-        } catch (e) {
-          print('Error decoding settings in Workspace.fromJson: $e');
-        }
-      } else if (json['settings'] is Map) {
-        settings = json['settings'] as Map<String, dynamic>;
-      }
-
-      final workspace = Workspace(
-        id: json['id']?.toString() ?? '',
-        name: json['name']?.toString() ?? 'Default Workspace',
-        description: json['description']?.toString() ?? '',
-        createdAt: int.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
-        updatedAt: int.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now().millisecondsSinceEpoch,
+      try { settings = rawSettings is Map ? Map<String, dynamic>.from(rawSettings) : {}; } catch (err) { print('Workspace.fromJson: ERROR casting settings: $err, value=$rawSettings, type=${rawSettings?.runtimeType}'); }
+      return Workspace(
+        id: id,
+        name: name,
+        description: description,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
         pages: pageMap,
-        pageOrder: pageOrder,
+        pageOrder: reconstructedPageOrder,
         settings: settings,
       );
-      print('Workspace.fromJson output: ${workspace.toJson()}');
-      return workspace;
-    } catch (e, stacktrace) {
-      print('Error in Workspace.fromJson: $e');
-      print(stacktrace);
+    } catch (err, stack) {
+      print('Workspace.fromJson: ERROR constructing Workspace: $err\n$stack');
+      print('Workspace.fromJson: Failing data: id=${json['id']}, name=${json['name']}, pageOrder=RECONSTRUCTED');
       return Workspace(
-        id: 'default',
-        name: 'Default Workspace',
-        pages: {},
-        pageOrder: [],
+        id: '',
+        name: 'Error Workspace',
+        description: 'Failed to load workspace: $err',
         createdAt: DateTime.now().millisecondsSinceEpoch,
         updatedAt: DateTime.now().millisecondsSinceEpoch,
-        description: 'Error loading workspace: $e',
+        pages: {},
+        pageOrder: [],
         settings: {},
       );
     }

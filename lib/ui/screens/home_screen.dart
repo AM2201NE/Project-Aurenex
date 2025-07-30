@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../models/workspace.dart';
 import '../../models/page.dart' as neonote_page;
 import '../../storage/repository.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../widgets/sidebar.dart';
 import '../widgets/page_list.dart';
 import '../widgets/empty_state.dart';
@@ -17,6 +20,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Model asset path and ready flag
+  String? _modelPath;
+  bool _modelReady = false;
   bool _isLoading = true;
   String? _selectedWorkspaceId;
   String? _selectedPageId;
@@ -26,6 +32,44 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadWorkspaces();
+  }
+
+  /// Prepare Qwen2-VL-2B model asset: copy from assets to writable path
+  Future<String> prepareModelAsset() async {
+    debugPrint('prepareModelAsset: Copying Qwen2-VL-2B asset to writable path...');
+    const assetPath = 'assets/ai_model/Qwen2-VL-2B-Instruct-Q4_K_M.gguf';
+    final data = await rootBundle.load(assetPath);
+    final dir = await getApplicationSupportDirectory();
+    final file = File('${dir.path}/qwen2-vl-2b-instruct.gguf');
+    if (!await file.exists()) {
+      await file.writeAsBytes(data.buffer.asUint8List());
+      debugPrint('prepareModelAsset: Asset copied to ${file.path}');
+    } else {
+      debugPrint('prepareModelAsset: Asset already exists at ${file.path}');
+    }
+    return file.path;
+  }
+
+  /// Initialize Qwen2-VL-2B model via FFI and mark as ready only on success
+  Future<void> initializeModelFFI(String modelPath) async {
+    debugPrint('initializeModelFFI: Initializing Qwen2-VL-2B model at $modelPath...');
+    final initResult = await QwenFFI.initialize(modelPath, {/* config */});
+    if (initResult == null || !(initResult.success ?? false)) {
+      // Handle initialization failure
+    }
+  }
+
+  /// Full model setup: copy asset, initialize FFI, mark ready
+  Future<void> setupModel() async {
+    try {
+      _modelPath = await prepareModelAsset();
+      await initializeModelFFI(_modelPath!);
+      debugPrint('setupModel: Model is ready and path is $_modelPath');
+    } catch (e, stack) {
+      debugPrint('setupModel: ERROR: $e');
+      debugPrint('setupModel: Stack: $stack');
+      _modelReady = false;
+    }
   }
 
   /// Load workspaces from repository
@@ -59,6 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Create a new workspace
   Future<void> _createWorkspace() async {
+    await setupModel();
+    debugPrint('Creating workspace with modelPath=$_modelPath, modelReady=$_modelReady');
     final repository = Provider.of<Repository>(context, listen: false);
     final workspace = Workspace(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -84,6 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Create a new page
   Future<void> _createPage() async {
+    debugPrint('Creating page: modelPath=$_modelPath, modelReady=$_modelReady');
     if (_selectedWorkspaceId == null) return;
     final repository = Provider.of<Repository>(context, listen: false);
     final workspace = _workspaces.firstWhere((w) => w.id == _selectedWorkspaceId);
@@ -114,10 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openEditor(neonote_page.Page page) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: Text('Editor')),
-          body: Center(child: Text('Editor for page: ${page.title}')),
-        ),
+        builder: (context) => EditorScreen(page: page),
       ),
     ).then((_) {
       _loadWorkspaces();

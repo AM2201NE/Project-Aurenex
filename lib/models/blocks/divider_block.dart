@@ -19,7 +19,7 @@ class DividerBlock extends Block {
   
   factory DividerBlock.fromMap(Map<String, dynamic> map) {
     return DividerBlock(
-      id: map['id'],
+      id: map['block_id'],
       parentId: map['parent_id'],
     );
   }
@@ -27,6 +27,7 @@ class DividerBlock extends Block {
   @override
   Block copy() {
     return DividerBlock(
+      id: id,
       parentId: parentId,
     );
   }
@@ -34,5 +35,13 @@ class DividerBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     return super.toMap();
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return DividerBlock(
+      id: id ?? this.id,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

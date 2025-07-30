@@ -30,10 +30,10 @@ class ImageBlock extends Block {
   
   factory ImageBlock.fromMap(Map<String, dynamic> map) {
     return ImageBlock(
-      id: map['id'],
-      source: map['source'] ?? '',
-      isAsset: map['is_asset'] == true,
-      caption: map['caption'],
+      id: map['block_id'],
+      source: map['content'] ?? '',
+      isAsset: map['metadata'] != null ? jsonDecode(map['metadata'])['isAsset'] : false,
+      caption: map['metadata'] != null ? jsonDecode(map['metadata'])['caption'] : null,
       parentId: map['parent_id'],
     );
   }
@@ -41,6 +41,7 @@ class ImageBlock extends Block {
   @override
   Block copy() {
     return ImageBlock(
+      id: id,
       source: source,
       isAsset: isAsset,
       caption: caption,
@@ -51,9 +52,18 @@ class ImageBlock extends Block {
   @override
   Map<String, dynamic> toJson() {
     final map = super.toMap();
-    map['source'] = source;
-    map['is_asset'] = isAsset;
-    map['caption'] = caption;
+    map['metadata'] = jsonEncode({'isAsset': isAsset, 'caption': caption});
     return map;
+  }
+
+  @override
+  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+    return ImageBlock(
+      id: id ?? this.id,
+      source: (metadata?['source'] ?? this.source) as String,
+      isAsset: (metadata?['isAsset'] ?? this.isAsset) as bool,
+      caption: (metadata?['caption'] ?? this.caption) as String?,
+      parentId: parentId ?? this.parentId,
+    );
   }
 }

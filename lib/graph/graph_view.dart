@@ -28,8 +28,8 @@ class GraphViewController extends ChangeNotifier {
     _edges.clear();
     
     // Workspace guarantees pageOrder is a non-null List<String>
-    final safePageOrder = workspace.pageOrder.where((e) => e.isNotEmpty && e != 'null').toList();
-    for (var e in workspace.pageOrder) {
+    final safePageOrder = workspace.pageOrder?.where((e) => e.isNotEmpty && e != 'null').toList() ?? [];
+    for (var e in workspace.pageOrder ?? []) {
       if (e.isEmpty || e == 'null') {
         debugPrint('GraphView: pageOrder entry is empty or "null": $e');
       }
@@ -37,7 +37,7 @@ class GraphViewController extends ChangeNotifier {
 
     // Add nodes for each page
     for (final pageId in safePageOrder) {
-      final page = workspace.pages[pageId];
+      final page = workspace.pages?[pageId];
       if (page != null) {
         _nodes[pageId] = NodeData(
           id: pageId,
@@ -49,7 +49,7 @@ class GraphViewController extends ChangeNotifier {
 
     // Add edges based on links between pages
     for (final pageId in safePageOrder) {
-      final page = workspace.pages[pageId];
+      final page = workspace.pages?[pageId];
       if (page == null) continue;
 
       // Find links in page blocks
@@ -70,7 +70,7 @@ class GraphViewController extends ChangeNotifier {
       for (final otherPageId in safePageOrder) {
         if (pageId == otherPageId) continue;
 
-        final otherPage = workspace.pages[otherPageId];
+        final otherPage = workspace.pages?[otherPageId];
         if (otherPage == null) continue;
 
         // Check for shared tags
@@ -283,12 +283,9 @@ class _GraphPainter extends CustomPainter {
     
     // Draw nodes
     for (final node in graph.nodes) {
-      final nodeId = node.key.toString();
+      final nodeId = (node.key as ValueKey<String>).value;
       
-      // Extract the actual ID from the ValueKey
-      final id = nodeId.replaceAll('[', '').replaceAll(']', '');
-      
-      final nodeData = controller._nodes[id];
+      final nodeData = controller._nodes[nodeId];
       if (nodeData == null) continue;
       
       final pos = algorithm.nodePosition(node);
