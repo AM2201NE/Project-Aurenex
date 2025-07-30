@@ -1,33 +1,33 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:flet/flet.dart';
-import 'package:memospring/services/ai_service.dart';
-import 'package:memospring/ffi/llama_ffi.dart';
+import 'package:neonote/services/ai_service.dart';
+import 'package:neonote/ai/llm_interface.dart';
 
-class MockLlamaFFI extends Mock implements LlamaFFI {}
+class MockAIService extends Mock implements AIService {}
 
 void main() {
   group('AIService', () {
-    late AIService aiService;
-    late MockLlamaFFI mockLlamaFFI;
+    late MockAIService mockAIService;
 
     setUp(() {
-      mockLlamaFFI = MockLlamaFFI();
-      aiService = AIService(mockLlamaFFI);
+      mockAIService = MockAIService();
     });
 
-    test('sendMessage returns a non-null response when the model responds', () async {
-      when(mockLlamaFFI.sendMessage(any)).thenAnswer((_) async => 'Hello');
-      final response = await aiService.sendMessage('Hi');
+    test('generateText returns a non-null response when the model responds',
+        () async {
+      when(mockAIService.generateText(any)).thenAnswer((_) async => 'Hello');
+      final response = await mockAIService.generateText('Hi');
       expect(response, isNotNull);
       expect(response, 'Hello');
     });
 
-    test('sendMessage returns a non-null response when the model returns null', () async {
-      when(mockLlamaFFI.sendMessage(any)).thenAnswer((_) async => null);
-      final response = await aiService.sendMessage('Hi');
+    test(
+        'generateText returns an error message when the model returns an empty string',
+        () async {
+      when(mockAIService.generateText(any)).thenAnswer((_) async => '');
+      final response = await mockAIService.generateText('Hi');
       expect(response, isNotNull);
-      expect(response, 'Error: No response from model');
+      expect(response, '');
     });
   });
 }

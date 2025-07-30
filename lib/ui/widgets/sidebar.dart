@@ -7,7 +7,7 @@ class Sidebar extends StatelessWidget {
   final String? selectedWorkspaceId;
   final Function(String) onWorkspaceSelected;
   final VoidCallback onCreateWorkspace;
-  
+
   const Sidebar({
     Key? key,
     required this.workspaces,
@@ -47,7 +47,7 @@ class Sidebar extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Workspace list
           Expanded(
             child: ListView.builder(
@@ -55,15 +55,16 @@ class Sidebar extends StatelessWidget {
               itemBuilder: (context, index) {
                 final workspace = workspaces[index];
                 final isSelected = workspace.id == selectedWorkspaceId;
-                
+
                 return ListTile(
                   title: Text(workspace.name),
                   subtitle: Text(
-                    '${workspace.pages.length} pages',
+                    '${workspace.pages?.length ?? 0} pages',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   selected: isSelected,
-                  selectedTileColor: Theme.of(context).colorScheme.primaryContainer,
+                  selectedTileColor:
+                      Theme.of(context).colorScheme.primaryContainer,
                   onTap: () => onWorkspaceSelected(workspace.id),
                 );
               },

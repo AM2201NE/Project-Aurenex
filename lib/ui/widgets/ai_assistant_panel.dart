@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 import '../../models/page.dart';
 import '../../models/blocks/base_block.dart';
-import '../../ai/llm_interface.dart';
+import '../../services/ai_service.dart';
+import '../../models/blocks/text_blocks.dart';
 
 /// AI assistant panel widget
 class AiAssistantPanel extends StatefulWidget {
   final Page page;
   final VoidCallback onClose;
   final void Function(Block) onInsertBlock;
-  
+  final AIService aiService;
+
   const AiAssistantPanel({
     Key? key,
     required this.page,
     required this.onClose,
     required this.onInsertBlock,
+    required this.aiService,
   }) : super(key: key);
 
   @override
@@ -22,56 +25,54 @@ class AiAssistantPanel extends StatefulWidget {
 
 class _AiAssistantPanelState extends State<AiAssistantPanel> {
   final TextEditingController _promptController = TextEditingController();
-  late LLMInterface _llmInterface;
+  late AIService _aiService;
   String _response = '';
   bool _isGenerating = false;
   bool _isInitialized = false;
-  
+
   @override
   void initState() {
     super.initState();
-    _llmInterface = LLMInterface();
+    _aiService = widget.aiService;
     _initializeAi();
   }
-  
+
   /// Initialize the AI
   Future<void> _initializeAi() async {
     setState(() {
       _isInitialized = false;
     });
-    
-    await _llmInterface.initialize();
-    
+
+    await _aiService.initialize();
+
     setState(() {
       _isInitialized = true;
-      _response = 'VibeAI assistant is ready. How can I help you with your note?';
+      _response =
+          'VibeAI assistant is ready. How can I help you with your note?';
     });
   }
-  
+
   /// Generate text from prompt
   Future<void> _generateText() async {
     final prompt = _promptController.text;
     if (prompt.isEmpty) return;
-    
+
     setState(() {
       _isGenerating = true;
     });
-    
+
     try {
       // Create context from page content
-      final pageContent = widget.page.blocks.values
-          .map((block) {
-            if (block.type.startsWith('heading')) {
-              return '# ${(block as dynamic).plainText}';
-            } else if (block.type == 'paragraph') {
-              return (block as dynamic).plainText;
-            } else {
-              return '';
-            }
-          })
-          .where((text) => text.isNotEmpty)
-          .join('\n\n');
-      
+      final pageContent = widget.page.blocks.values.map((block) {
+        if (block.type.startsWith('heading')) {
+          return '# ${block.content['text']}';
+        } else if (block.type == 'paragraph') {
+          return block.content['text'];
+        } else {
+          return '';
+        }
+      }).where((text) => text.isNotEmpty).join('\n\n');
+
       // Create full prompt with context
       final fullPrompt = '''
 Context:
@@ -83,13 +84,12 @@ User request: $prompt
 
 Please provide a helpful response:
 ''';
-      
-      final response = await _llmInterface.generateText(
+
+      final response = await _aiService.generateText(
         fullPrompt,
-        temperature: 0.7,
         maxTokens: 1024,
       );
-      
+
       setState(() {
         _response = response;
         _isGenerating = false;
@@ -101,14 +101,13 @@ Please provide a helpful response:
       });
     }
   }
-  
+
   @override
   void dispose() {
     _promptController.dispose();
-    _llmInterface.dispose();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -148,7 +147,7 @@ Please provide a helpful response:
               ],
             ),
           ),
-          
+
           // Response area
           Expanded(
             child: Container(
@@ -187,7 +186,7 @@ Please provide a helpful response:
               ),
             ),
           ),
-          
+
           // Input area
           Container(
             padding: const EdgeInsets.all(16.0),
@@ -215,7 +214,8 @@ Please provide a helpful response:
                 const SizedBox(width: 8.0),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: _isInitialized && !_isGenerating ? _generateText : null,
+                  onPressed:
+                      _isInitialized && !_isGenerating ? _generateText : null,
                   tooltip: 'Send',
                 ),
               ],

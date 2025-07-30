@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'base_block.dart';
 
@@ -11,52 +12,37 @@ class MermaidBlock extends Block {
     this.caption,
     String? parentId,
   }) : super(
-    id: id,
-    type: 'mermaid',
-    richText: caption != null ? [TextSpan(text: caption)] : [],
-    parentId: parentId,
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['code'] = code;
-    map['caption'] = caption;
-    return map;
-  }
-  
+          id: id,
+          type: 'mermaid',
+          content: {
+            'code': code,
+            'caption': caption,
+          },
+          parentId: parentId,
+        );
+
   factory MermaidBlock.fromMap(Map<String, dynamic> map) {
     return MermaidBlock(
-      id: map['block_id'],
-      code: map['content'] ?? '',
-      caption: map['metadata'] != null ? jsonDecode(map['metadata'])['caption'] : null,
-      parentId: map['parent_id'],
+      id: map['id'],
+      code: map['content']['code'] ?? '',
+      caption: map['content']['caption'],
+      parentId: map['parentId'],
     );
   }
 
   @override
-  Block copy() {
-    return MermaidBlock(
-      id: id,
-      code: code,
-      caption: caption,
-      parentId: parentId,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['metadata'] = jsonEncode({'caption': caption});
-    return map;
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return MermaidBlock(
       id: id ?? this.id,
-      code: (metadata?['code'] ?? this.code) as String,
-      caption: (metadata?['caption'] ?? this.caption) as String?,
+      code: content?['code'] ?? code,
+      caption: content?['caption'] ?? caption,
       parentId: parentId ?? this.parentId,
     );
   }

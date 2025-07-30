@@ -5,18 +5,18 @@ import '../models/blocks/base_block.dart';
 
 class Repository {
   final Future<Database> _database;
-  
+
   Repository(this._database);
-  
+
   Future<void> saveWorkspace(Workspace workspace) async {
     final db = await _database;
     await db.insert(
       'workspaces',
-      workspace.toJson(),
+      workspace.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
-  
+
   Future<Workspace?> loadWorkspace(String id) async {
     final db = await _database;
     final maps = await db.query(
@@ -26,17 +26,17 @@ class Repository {
     );
 
     if (maps.isNotEmpty) {
-      return Workspace.fromJson(maps.first);
+      return Workspace.fromMap(maps.first);
     }
     return null;
   }
-  
+
   Future<List<Workspace>> listWorkspaces() async {
     final db = await _database;
     final maps = await db.query('workspaces');
-    return maps.map((map) => Workspace.fromJson(map)).toList();
+    return maps.map((map) => Workspace.fromMap(map)).toList();
   }
-  
+
   Future<void> deleteWorkspace(String id) async {
     final db = await _database;
     await db.delete(
@@ -45,29 +45,29 @@ class Repository {
       whereArgs: [id],
     );
   }
-  
+
   Future<void> savePage(Page page) async {
     final db = await _database;
     await db.insert(
       'pages',
-      page.toMetadataMap(),
+      page.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
     for (final block in page.blocks.values) {
       await db.insert(
         'blocks',
-        block.toMap(),
+        block.toJson(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
   }
-  
+
   Future<Page?> loadPage(String id) async {
     final db = await _database;
     final maps = await db.query(
       'pages',
-      where: 'page_id = ?',
+      where: 'id = ?',
       whereArgs: [id],
     );
 
@@ -78,7 +78,7 @@ class Repository {
     }
     return null;
   }
-  
+
   Future<List<Page>> listPages() async {
     final db = await _database;
     final maps = await db.query('pages');
@@ -90,12 +90,12 @@ class Repository {
     }
     return pages;
   }
-  
+
   Future<Map<String, Block>> _loadBlocksForPage(String pageId) async {
     final db = await _database;
     final maps = await db.query(
       'blocks',
-      where: 'page_id = ?',
+      where: 'parentId = ?',
       whereArgs: [pageId],
     );
 
@@ -106,16 +106,16 @@ class Repository {
     }
     return blocks;
   }
-  
+
   Future<void> deletePage(String id) async {
     final db = await _database;
     await db.delete(
       'pages',
-      where: 'page_id = ?',
+      where: 'id = ?',
       whereArgs: [id],
     );
   }
-  
+
   Future<List<Page>> searchPagesByTitle(String query) async {
     final db = await _database;
     final maps = await db.query(
@@ -123,7 +123,7 @@ class Repository {
       where: 'title LIKE ?',
       whereArgs: ['%$query%'],
     );
-    
+
     final pages = <Page>[];
     for (final map in maps) {
       final page = Page.fromMap(map);
@@ -132,7 +132,7 @@ class Repository {
     }
     return pages;
   }
-  
+
   Future<List<Page>> searchPagesByTag(String tag) async {
     final db = await _database;
     final maps = await db.query(
@@ -140,7 +140,7 @@ class Repository {
       where: 'tags LIKE ?',
       whereArgs: ['%$tag%'],
     );
-    
+
     final pages = <Page>[];
     for (final map in maps) {
       final page = Page.fromMap(map);

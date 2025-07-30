@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'base_block.dart';
 
@@ -13,56 +14,40 @@ class ImageBlock extends Block {
     this.caption,
     String? parentId,
   }) : super(
-    id: id,
-    type: 'image',
-    richText: caption != null ? [TextSpan(text: caption)] : [],
-    parentId: parentId,
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['source'] = source;
-    map['is_asset'] = isAsset;
-    map['caption'] = caption;
-    return map;
-  }
-  
+          id: id,
+          type: 'image',
+          content: {
+            'url': source,
+            'isAsset': isAsset,
+            'caption': caption,
+          },
+          parentId: parentId,
+        );
+
   factory ImageBlock.fromMap(Map<String, dynamic> map) {
     return ImageBlock(
-      id: map['block_id'],
-      source: map['content'] ?? '',
-      isAsset: map['metadata'] != null ? jsonDecode(map['metadata'])['isAsset'] : false,
-      caption: map['metadata'] != null ? jsonDecode(map['metadata'])['caption'] : null,
-      parentId: map['parent_id'],
+      id: map['id'],
+      source: map['content']['url'] ?? '',
+      isAsset: map['content']['isAsset'] ?? false,
+      caption: map['content']['caption'],
+      parentId: map['parentId'],
     );
   }
 
   @override
-  Block copy() {
-    return ImageBlock(
-      id: id,
-      source: source,
-      isAsset: isAsset,
-      caption: caption,
-      parentId: parentId,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['metadata'] = jsonEncode({'isAsset': isAsset, 'caption': caption});
-    return map;
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return ImageBlock(
       id: id ?? this.id,
-      source: (metadata?['source'] ?? this.source) as String,
-      isAsset: (metadata?['isAsset'] ?? this.isAsset) as bool,
-      caption: (metadata?['caption'] ?? this.caption) as String?,
+      source: content?['url'] ?? source,
+      isAsset: content?['isAsset'] ?? isAsset,
+      caption: content?['caption'] ?? caption,
       parentId: parentId ?? this.parentId,
     );
   }

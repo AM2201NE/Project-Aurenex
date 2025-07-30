@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'base_block.dart';
+import 'text_span_utils.dart';
 
 class ParagraphBlock extends Block {
   ParagraphBlock({
@@ -7,46 +8,36 @@ class ParagraphBlock extends Block {
     required List<TextSpan> richText,
     String? parentId,
   }) : super(
-    id: id,
-    type: 'paragraph',
-    richText: richText,
-    parentId: parentId,
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    return map;
-  }
-  
+          id: id,
+          type: 'paragraph',
+          content: {
+            'text': richTextToHtml(richText),
+          },
+          parentId: parentId,
+        );
+
   factory ParagraphBlock.fromMap(Map<String, dynamic> map) {
     return ParagraphBlock(
-      id: map['block_id'],
-      richText: [TextSpan(text: map['content'] ?? '')],
-      parentId: map['parent_id'],
+      id: map['id'],
+      richText: htmlToRichText(map['content']['text'] ?? ''),
+      parentId: map['parentId'],
     );
   }
 
   @override
-  Block copy() {
-    return ParagraphBlock(
-      id: id,
-      richText: richText,
-      parentId: parentId,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    return super.toMap();
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return ParagraphBlock(
       id: id ?? this.id,
-      richText: richText ?? this.richText,
+      richText: content?['text'] != null
+          ? htmlToRichText(content!['text'])
+          : htmlToRichText(this.content['text']),
       parentId: parentId ?? this.parentId,
     );
   }

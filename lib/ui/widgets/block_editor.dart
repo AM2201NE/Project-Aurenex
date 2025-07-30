@@ -4,6 +4,17 @@ import '../../models/blocks/text_blocks.dart';
 import '../../models/blocks/list_blocks.dart';
 import '../../models/blocks/media_blocks.dart';
 import '../../models/blocks/advanced_blocks.dart';
+import '../../models/blocks/todo_block.dart';
+import '../../models/blocks/code_block.dart';
+import '../../models/blocks/quote_block.dart';
+import '../../models/blocks/divider_block.dart';
+import '../../models/blocks/heading_block.dart';
+import '../../models/blocks/image_block.dart';
+import '../../models/blocks/bookmark_block.dart';
+import '../../models/blocks/mermaid_block.dart';
+import '../../models/blocks/numbered_list_item_block.dart';
+import '../../models/blocks/bulleted_list_item_block.dart';
+import '../../models/blocks/paragraph_block.dart';
 
 /// Block editor widget for editing different block types
 class BlockEditor extends StatefulWidget {
@@ -11,7 +22,7 @@ class BlockEditor extends StatefulWidget {
   final void Function(String) onAddBlockAfter;
   final VoidCallback onDeleteBlock;
   final void Function(Block) onUpdateBlock;
-  
+
   const BlockEditor({
     Key? key,
     required this.block,
@@ -27,7 +38,7 @@ class BlockEditor extends StatefulWidget {
 class _BlockEditorState extends State<BlockEditor> {
   bool _isHovered = false;
   bool _isFocused = false;
-  
+
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
@@ -73,7 +84,7 @@ class _BlockEditorState extends State<BlockEditor> {
                     ],
                   ),
                 ),
-              
+
               // Block content
               Expanded(
                 child: _buildBlockEditor(),
@@ -84,7 +95,7 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build the block editor based on block type
   Widget _buildBlockEditor() {
     switch (widget.block.type) {
@@ -95,9 +106,11 @@ class _BlockEditorState extends State<BlockEditor> {
       case 'heading_3':
         return _buildHeadingEditor(widget.block as HeadingBlock);
       case 'bulleted_list_item':
-        return _buildBulletedListItemEditor(widget.block as BulletedListItemBlock);
+        return _buildBulletedListItemEditor(
+            widget.block as BulletedListItemBlock);
       case 'numbered_list_item':
-        return _buildNumberedListItemEditor(widget.block as NumberedListItemBlock);
+        return _buildNumberedListItemEditor(
+            widget.block as NumberedListItemBlock);
       case 'to_do':
         return _buildTodoEditor(widget.block as TodoBlock);
       case 'code':
@@ -116,13 +129,14 @@ class _BlockEditorState extends State<BlockEditor> {
         return Text('Unsupported block type: ${widget.block.type}');
     }
   }
-  
+
   /// Build paragraph editor
   Widget _buildParagraphEditor(ParagraphBlock block) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: TextField(
-        controller: TextEditingController(text: block.plainText),
+        controller:
+            TextEditingController(text: block.content['text'] as String?),
         decoration: const InputDecoration(
           border: InputBorder.none,
           hintText: 'Type something...',
@@ -130,17 +144,13 @@ class _BlockEditorState extends State<BlockEditor> {
         style: Theme.of(context).textTheme.bodyLarge,
         maxLines: null,
         onChanged: (value) {
-          final updatedBlock = ParagraphBlock(
-            id: block.id,
-            richText: [TextSpan(text: value)],
-            parentId: block.parentId,
-          );
-          widget.onUpdateBlock(updatedBlock);
+          widget.onUpdateBlock(
+              block.copyWith(content: {'text': value}) as ParagraphBlock);
         },
       ),
     );
   }
-  
+
   /// Build heading editor
   Widget _buildHeadingEditor(HeadingBlock block) {
     TextStyle? style;
@@ -155,11 +165,12 @@ class _BlockEditorState extends State<BlockEditor> {
         style = Theme.of(context).textTheme.headlineSmall;
         break;
     }
-    
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: TextField(
-        controller: TextEditingController(text: block.plainText),
+        controller:
+            TextEditingController(text: block.content['text'] as String?),
         decoration: const InputDecoration(
           border: InputBorder.none,
           hintText: 'Heading',
@@ -167,18 +178,13 @@ class _BlockEditorState extends State<BlockEditor> {
         style: style,
         maxLines: null,
         onChanged: (value) {
-          final updatedBlock = HeadingBlock(
-            id: block.id,
-            level: block.level,
-            richText: [TextSpan(text: value)],
-            parentId: block.parentId,
-          );
-          widget.onUpdateBlock(updatedBlock);
+          widget.onUpdateBlock(
+              block.copyWith(content: {'text': value}) as HeadingBlock);
         },
       ),
     );
   }
-  
+
   /// Build bulleted list item editor
   Widget _buildBulletedListItemEditor(BulletedListItemBlock block) {
     return Padding(
@@ -192,7 +198,8 @@ class _BlockEditorState extends State<BlockEditor> {
           ),
           Expanded(
             child: TextField(
-              controller: TextEditingController(text: block.plainText),
+              controller: TextEditingController(
+                  text: block.content['text'] as String?),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: 'List item',
@@ -200,12 +207,9 @@ class _BlockEditorState extends State<BlockEditor> {
               style: Theme.of(context).textTheme.bodyLarge,
               maxLines: null,
               onChanged: (value) {
-                final updatedBlock = BulletedListItemBlock(
-                  id: block.id,
-                  richText: [TextSpan(text: value)],
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(block.copyWith(content: {
+                  'text': value
+                }) as BulletedListItemBlock);
               },
             ),
           ),
@@ -213,7 +217,7 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build numbered list item editor
   Widget _buildNumberedListItemEditor(NumberedListItemBlock block) {
     return Padding(
@@ -227,7 +231,8 @@ class _BlockEditorState extends State<BlockEditor> {
           ),
           Expanded(
             child: TextField(
-              controller: TextEditingController(text: block.plainText),
+              controller: TextEditingController(
+                  text: block.content['text'] as String?),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: 'List item',
@@ -235,12 +240,9 @@ class _BlockEditorState extends State<BlockEditor> {
               style: Theme.of(context).textTheme.bodyLarge,
               maxLines: null,
               onChanged: (value) {
-                final updatedBlock = NumberedListItemBlock(
-                  id: block.id,
-                  richText: [TextSpan(text: value)],
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(block.copyWith(content: {
+                  'text': value
+                }) as NumberedListItemBlock);
               },
             ),
           ),
@@ -248,7 +250,7 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build todo editor
   Widget _buildTodoEditor(TodoBlock block) {
     return Padding(
@@ -259,34 +261,26 @@ class _BlockEditorState extends State<BlockEditor> {
           Checkbox(
             value: block.checked,
             onChanged: (value) {
-              final updatedBlock = TodoBlock(
-                id: block.id,
-                richText: block.richText,
-                checked: value ?? false,
-                parentId: block.parentId,
-              );
-              widget.onUpdateBlock(updatedBlock);
+              widget.onUpdateBlock(
+                  block.copyWith(content: {'checked': value}) as TodoBlock);
             },
           ),
           Expanded(
             child: TextField(
-              controller: TextEditingController(text: block.plainText),
+              controller: TextEditingController(
+                  text: block.content['text'] as String?),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: 'To-do',
               ),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                decoration: block.checked ? TextDecoration.lineThrough : null,
-              ),
+                    decoration:
+                        block.checked ? TextDecoration.lineThrough : null,
+                  ),
               maxLines: null,
               onChanged: (value) {
-                final updatedBlock = TodoBlock(
-                  id: block.id,
-                  richText: [TextSpan(text: value)],
-                  checked: block.checked,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'text': value}) as TodoBlock);
               },
             ),
           ),
@@ -294,13 +288,13 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build code editor
   Widget _buildCodeEditor(CodeBlock block) {
     return Container(
       margin: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(4.0),
       ),
       child: Column(
@@ -328,18 +322,14 @@ class _BlockEditorState extends State<BlockEditor> {
               }).toList(),
               onChanged: (value) {
                 if (value != null) {
-                  final updatedBlock = CodeBlock(
-                    id: block.id,
-                    text: block.text,
-                    language: value,
-                    parentId: block.parentId,
-                  );
-                  widget.onUpdateBlock(updatedBlock);
+                  widget.onUpdateBlock(
+                      block.copyWith(content: {'language': value})
+                          as CodeBlock);
                 }
               },
             ),
           ),
-          
+
           // Code editor
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -354,13 +344,8 @@ class _BlockEditorState extends State<BlockEditor> {
               ),
               maxLines: null,
               onChanged: (value) {
-                final updatedBlock = CodeBlock(
-                  id: block.id,
-                  text: value,
-                  language: block.language,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'code': value}) as CodeBlock);
               },
             ),
           ),
@@ -368,7 +353,7 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build quote editor
   Widget _buildQuoteEditor(QuoteBlock block) {
     return Container(
@@ -383,27 +368,24 @@ class _BlockEditorState extends State<BlockEditor> {
         ),
       ),
       child: TextField(
-        controller: TextEditingController(text: block.plainText),
+        controller:
+            TextEditingController(text: block.content['text'] as String?),
         decoration: const InputDecoration(
           border: InputBorder.none,
           hintText: 'Quote',
         ),
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          fontStyle: FontStyle.italic,
-        ),
+              fontStyle: FontStyle.italic,
+            ),
         maxLines: null,
         onChanged: (value) {
-          final updatedBlock = QuoteBlock(
-            id: block.id,
-            richText: [TextSpan(text: value)],
-            parentId: block.parentId,
-          );
-          widget.onUpdateBlock(updatedBlock);
+          widget.onUpdateBlock(
+              block.copyWith(content: {'text': value}) as QuoteBlock);
         },
       ),
     );
   }
-  
+
   /// Build divider editor
   Widget _buildDividerEditor() {
     return const Padding(
@@ -411,7 +393,7 @@ class _BlockEditorState extends State<BlockEditor> {
       child: Divider(height: 1.0),
     );
   }
-  
+
   /// Build image editor
   Widget _buildImageEditor(ImageBlock block) {
     return Container(
@@ -441,7 +423,7 @@ class _BlockEditorState extends State<BlockEditor> {
                       );
                     },
                   ),
-          
+
           // Image source input
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -453,18 +435,12 @@ class _BlockEditorState extends State<BlockEditor> {
                 hintText: 'Enter image URL',
               ),
               onChanged: (value) {
-                final updatedBlock = ImageBlock(
-                  id: block.id,
-                  source: value,
-                  isAsset: block.isAsset,
-                  caption: block.caption,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'url': value}) as ImageBlock);
               },
             ),
           ),
-          
+
           // Caption input
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -476,14 +452,8 @@ class _BlockEditorState extends State<BlockEditor> {
                 hintText: 'Enter image caption',
               ),
               onChanged: (value) {
-                final updatedBlock = ImageBlock(
-                  id: block.id,
-                  source: block.source,
-                  isAsset: block.isAsset,
-                  caption: value.isEmpty ? null : value,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'caption': value}) as ImageBlock);
               },
             ),
           ),
@@ -491,7 +461,7 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build bookmark editor
   Widget _buildBookmarkEditor(BookmarkBlock block) {
     return Container(
@@ -513,18 +483,11 @@ class _BlockEditorState extends State<BlockEditor> {
               hintText: 'Enter URL',
             ),
             onChanged: (value) {
-              final updatedBlock = BookmarkBlock(
-                id: block.id,
-                url: value,
-                title: block.title,
-                description: block.description,
-                thumbnailUrl: block.thumbnailUrl,
-                parentId: block.parentId,
-              );
-              widget.onUpdateBlock(updatedBlock);
+              widget.onUpdateBlock(
+                  block.copyWith(content: {'url': value}) as BookmarkBlock);
             },
           ),
-          
+
           // Title input
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -536,40 +499,9 @@ class _BlockEditorState extends State<BlockEditor> {
                 hintText: 'Enter title',
               ),
               onChanged: (value) {
-                final updatedBlock = BookmarkBlock(
-                  id: block.id,
-                  url: block.url,
-                  title: value.isEmpty ? null : value,
-                  description: block.description,
-                  thumbnailUrl: block.thumbnailUrl,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
-              },
-            ),
-          ),
-          
-          // Description input
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: TextField(
-              controller: TextEditingController(text: block.description ?? ''),
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Description',
-                hintText: 'Enter description',
-              ),
-              maxLines: 2,
-              onChanged: (value) {
-                final updatedBlock = BookmarkBlock(
-                  id: block.id,
-                  url: block.url,
-                  title: block.title,
-                  description: value.isEmpty ? null : value,
-                  thumbnailUrl: block.thumbnailUrl,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'title': value})
+                        as BookmarkBlock);
               },
             ),
           ),
@@ -577,13 +509,13 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Build mermaid editor
   Widget _buildMermaidEditor(MermaidBlock block) {
     return Container(
       margin: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(4.0),
       ),
       child: Column(
@@ -597,7 +529,7 @@ class _BlockEditorState extends State<BlockEditor> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-          
+
           // Code editor
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -612,17 +544,12 @@ class _BlockEditorState extends State<BlockEditor> {
               ),
               maxLines: null,
               onChanged: (value) {
-                final updatedBlock = MermaidBlock(
-                  id: block.id,
-                  code: value,
-                  caption: block.caption,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'code': value}) as MermaidBlock);
               },
             ),
           ),
-          
+
           // Caption input
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -634,13 +561,9 @@ class _BlockEditorState extends State<BlockEditor> {
                 hintText: 'Enter diagram caption',
               ),
               onChanged: (value) {
-                final updatedBlock = MermaidBlock(
-                  id: block.id,
-                  code: block.code,
-                  caption: value.isEmpty ? null : value,
-                  parentId: block.parentId,
-                );
-                widget.onUpdateBlock(updatedBlock);
+                widget.onUpdateBlock(
+                    block.copyWith(content: {'caption': value})
+                        as MermaidBlock);
               },
             ),
           ),
@@ -648,19 +571,21 @@ class _BlockEditorState extends State<BlockEditor> {
       ),
     );
   }
-  
+
   /// Show add block menu
   void _showAddBlockMenu(BuildContext context) {
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
       ),
       Offset.zero & overlay.size,
     );
-    
+
     showMenu<String>(
       context: context,
       position: position,

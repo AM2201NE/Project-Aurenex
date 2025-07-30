@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'base_block.dart';
 
@@ -11,52 +12,37 @@ class MathBlock extends Block {
     required this.isInline,
     String? parentId,
   }) : super(
-    id: id,
-    type: 'math',
-    richText: [TextSpan(text: equation)],
-    parentId: parentId,
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['equation'] = equation;
-    map['is_inline'] = isInline;
-    return map;
-  }
-  
+          id: id,
+          type: 'math',
+          content: {
+            'equation': equation,
+            'isInline': isInline,
+          },
+          parentId: parentId,
+        );
+
   factory MathBlock.fromMap(Map<String, dynamic> map) {
     return MathBlock(
-      id: map['block_id'],
-      equation: map['content'] ?? '',
-      isInline: map['metadata'] != null ? jsonDecode(map['metadata'])['isInline'] : false,
-      parentId: map['parent_id'],
+      id: map['id'],
+      equation: map['content']['equation'] ?? '',
+      isInline: map['content']['isInline'] ?? false,
+      parentId: map['parentId'],
     );
   }
 
   @override
-  Block copy() {
-    return MathBlock(
-      id: id,
-      equation: equation,
-      isInline: isInline,
-      parentId: parentId,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['metadata'] = jsonEncode({'isInline': isInline});
-    return map;
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return MathBlock(
       id: id ?? this.id,
-      equation: (metadata?['equation'] ?? this.equation) as String,
-      isInline: (metadata?['isInline'] ?? this.isInline) as bool,
+      equation: content?['equation'] ?? equation,
+      isInline: content?['isInline'] ?? isInline,
       parentId: parentId ?? this.parentId,
     );
   }

@@ -1,70 +1,57 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'base_block.dart';
+import 'text_span_utils.dart';
 
 class ToggleBlock extends Block {
   ToggleBlock({
     String? id,
     required List<TextSpan> richText,
     String? parentId,
-    Map<String, dynamic>? children,
+    Map<String, Block>? children,
     List<String>? childrenOrder,
   }) : super(
-    id: id,
-    type: 'toggle',
-    richText: richText,
-    parentId: parentId,
-    children: children ?? {},
-    childrenOrder: childrenOrder ?? [],
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    map['children'] = children;
-    map['children_order'] = childrenOrder;
-    return map;
-  }
-  
+          id: id,
+          type: 'toggle',
+          content: {
+            'text': richTextToHtml(richText),
+          },
+          parentId: parentId,
+          children: children,
+          childrenOrder: childrenOrder,
+        );
+
   factory ToggleBlock.fromMap(Map<String, dynamic> map) {
     return ToggleBlock(
-      id: map['block_id'],
-      richText: [TextSpan(text: map['content'] ?? '')],
-      parentId: map['parent_id'],
-      children: map['metadata'] != null ? (jsonDecode(map['metadata'])['children'] as Map<String, dynamic>).map((key, value) => MapEntry(key, Block.fromMap(value as Map<String, dynamic>))) : {},
-      childrenOrder: map['metadata'] != null ? (jsonDecode(map['metadata'])['childrenOrder'] as List<dynamic>).map((e) => e.toString()).toList() : [],
+      id: map['id'],
+      richText: htmlToRichText(map['content']['text'] ?? ''),
+      parentId: map['parentId'],
+      children: (map['children'] as Map<String, dynamic>?)?.map(
+        (key, value) => MapEntry(key, Block.fromMap(value)),
+      ),
+      childrenOrder: (map['childrenOrder'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList(),
     );
   }
 
   @override
-  Block copy() {
-    return ToggleBlock(
-      id: id,
-      richText: richText,
-      parentId: parentId,
-      children: children,
-      childrenOrder: childrenOrder,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['metadata'] = jsonEncode({
-      'children': children.map((key, value) => MapEntry(key, value.toJson())),
-      'childrenOrder': childrenOrder,
-    });
-    return map;
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return ToggleBlock(
       id: id ?? this.id,
-      richText: richText ?? this.richText,
+      richText: content?['text'] != null
+          ? htmlToRichText(content!['text'])
+          : htmlToRichText(this.content['text']),
       parentId: parentId ?? this.parentId,
-      children: (metadata?['children'] as Map<String, Block>?) ?? this.children,
-      childrenOrder: (metadata?['childrenOrder'] as List<String>?) ?? this.childrenOrder,
+      children: children ?? this.children,
+      childrenOrder: childrenOrder ?? this.childrenOrder,
     );
   }
 }

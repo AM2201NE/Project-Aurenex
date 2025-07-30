@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'base_block.dart';
+import 'text_span_utils.dart';
 
 class TodoBlock extends Block {
   final bool checked;
@@ -10,52 +12,39 @@ class TodoBlock extends Block {
     required this.checked,
     String? parentId,
   }) : super(
-    id: id,
-    type: 'to_do',
-    richText: richText,
-    parentId: parentId,
-  );
-  
-  @override
-  Map<String, dynamic> toMap() {
-    final map = super.toMap();
-    map['rich_text'] = richText.map((span) => span.text).toList();
-    map['checked'] = checked;
-    return map;
-  }
-  
+          id: id,
+          type: 'to_do',
+          content: {
+            'text': richTextToHtml(richText),
+            'checked': checked,
+          },
+          parentId: parentId,
+        );
+
   factory TodoBlock.fromMap(Map<String, dynamic> map) {
     return TodoBlock(
-      id: map['block_id'],
-      richText: [TextSpan(text: map['content'] ?? '')],
-      checked: map['metadata'] != null ? jsonDecode(map['metadata'])['checked'] : false,
-      parentId: map['parent_id'],
+      id: map['id'],
+      richText: htmlToRichText(map['content']['text'] ?? ''),
+      checked: map['content']['checked'] ?? false,
+      parentId: map['parentId'],
     );
   }
 
   @override
-  Block copy() {
-    return TodoBlock(
-      id: id,
-      richText: richText,
-      checked: checked,
-      parentId: parentId,
-    );
-  }
-
-  @override
-  Map<String, dynamic> toJson() {
-    final map = super.toMap();
-    map['metadata'] = jsonEncode({'checked': checked});
-    return map;
-  }
-
-  @override
-  Block copyWith({String? id, String? type, List<TextSpan>? richText, String? parentId, Map<String, dynamic>? metadata}) {
+  Block copyWith({
+    String? id,
+    String? type,
+    Map<String, dynamic>? content,
+    String? parentId,
+    Map<String, Block>? children,
+    List<String>? childrenOrder,
+  }) {
     return TodoBlock(
       id: id ?? this.id,
-      richText: richText ?? this.richText,
-      checked: (metadata?['checked'] ?? this.checked) as bool,
+      richText: content?['text'] != null
+          ? htmlToRichText(content!['text'])
+          : htmlToRichText(this.content['text']),
+      checked: content?['checked'] ?? checked,
       parentId: parentId ?? this.parentId,
     );
   }
